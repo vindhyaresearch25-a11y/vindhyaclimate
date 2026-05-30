@@ -1,0 +1,21 @@
+﻿# heavy intermediate cache — regenerable from scripts
+outputs/cache/
+outputs/gee_downloads/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# os
+.DS_Store
+Thumbs.db
+
+# raw NetCDF (too large)
+*.nc
+
+# editor
+.vscode/
+.idea/

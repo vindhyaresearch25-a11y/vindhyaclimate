@@ -6,13 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MP Climate Intelligence System | AI-Powered Climate Risk Platform</title>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
-<link href="./MP Climate Intelligence System _ AI-Powered Climate Risk Platform_files/css2" rel="stylesheet">
-<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./MP Climate Intelligence System _ AI-Powered Climate Risk Platform_files/leaflet.css">
-<link rel="stylesheet" href="./MP Climate Intelligence System _ AI-Powered Climate Risk Platform_files/all.min.css">
-<script src="./MP Climate Intelligence System _ AI-Powered Climate Risk Platform_files/leaflet.js.download"></script>
-<script src="./MP Climate Intelligence System _ AI-Powered Climate Risk Platform_files/chart.umd.min.js.download"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{
 --bg-deep:#f0faf1;
@@ -41,6 +39,8 @@ body{background:var(--bg-deep);color:var(--text);font-family:'IBM Plex Sans',san
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:#e6f5e9;}
 ::-webkit-scrollbar-thumb{background:#c4e0cb;border-radius:2px;}
+/* Cadastral tooltip */
+.cad-tooltip{background:rgba(0,0,0,0.75);border:none;color:#fff;font-size:0.55rem;padding:2px 6px;border-radius:3px;white-space:nowrap;}
 
 /* =========== HERO =========== */
 #hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;z-index:1000;background:var(--bg-deep);}
@@ -144,6 +144,17 @@ body{background:var(--bg-deep);color:var(--text);font-family:'IBM Plex Sans',san
 .loc-breadcrumb{font-size:0.55rem;color:var(--text-dim);margin-top:0.3rem;padding-top:0.4rem;border-top:1px solid var(--border);line-height:1.5;word-break:break-word;}
 .loc-breadcrumb b{color:var(--cyan);}
 
+/* Timeline */
+.map-timeline{position:absolute;bottom:0.5rem;left:50%;transform:translateX(-50%);z-index:500;background:rgba(245,252,246,0.94);border:1px solid var(--border);border-radius:6px;padding:0.35rem 0.75rem;display:flex;align-items:center;gap:0.4rem;backdrop-filter:blur(8px);font-size:0.65rem;}
+.map-timeline .tl-btn{background:none;border:1px solid var(--border);border-radius:4px;padding:0.2rem 0.35rem;cursor:pointer;color:var(--cyan);font-size:0.6rem;line-height:1;}
+.map-timeline .tl-btn:hover{background:rgba(92,195,205,0.1);}
+.map-timeline .tl-label{font-weight:700;color:var(--text);min-width:2rem;text-align:center;font-size:0.7rem;}
+.map-timeline .tl-slider{-webkit-appearance:none;appearance:none;height:3px;background:var(--border);border-radius:2px;outline:none;width:90px;cursor:pointer;}
+.map-timeline .tl-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border-radius:50%;background:var(--cyan);border:2px solid #fff;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.15);}
+.map-timeline .tl-range{color:var(--text-dim);font-size:0.55rem;white-space:nowrap;}
+.map-timeline .tl-btn-ai{border-color:rgba(230,207,107,0.4);color:var(--orange);}
+.map-timeline .tl-btn-ai:hover{background:rgba(230,207,107,0.1);}
+
 /* Right panel */
 #right-panel{width:280px;background:linear-gradient(rgba(238,249,239,0.93),rgba(238,249,239,0.96)),url('https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=600&q=60') center/cover fixed;border-left:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;flex-shrink:0;}
 
@@ -172,6 +183,8 @@ body{background:var(--bg-deep);color:var(--text);font-family:'IBM Plex Sans',san
 .metric-bar{height:3px;background:var(--border);border-radius:2px;margin-top:0.4rem;overflow:hidden;}
 .metric-bar-fill{height:100%;border-radius:2px;transition:width 1s ease;}
 .metric-trend{font-size:0.6rem;color:var(--text-dim);margin-top:0.2rem;}
+.metric-card.hazard-highlight{border-color:var(--cyan)!important;box-shadow:0 0 12px rgba(92,195,205,0.25),inset 0 0 8px rgba(92,195,205,0.06);background:rgba(92,195,205,0.08)!important;transform:translateY(-1px);}
+.hazard-tag{border-color:var(--cyan)!important;box-shadow:0 0 0 2px rgba(92,195,205,0.4);}
 
 /* Advisory cards */
 .advisory-card{margin:0.5rem;border:1px solid var(--border);border-radius:6px;padding:0.6rem;background:rgba(92,195,205,0.02);}
@@ -394,11 +407,8 @@ canvas.chart-canvas{max-height:100%;}
       <div class="nav-item" onclick="setNav(this,&#39;heatwaves&#39;);focusHazard(&#39;heat&#39;)"><span class="nav-icon"><i class="fa fa-sun"></i></span><span class="nav-label">Heat Waves</span><span class="nav-badge">ALERT</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;precip&#39;);focusHazard(&#39;rain&#39;)"><span class="nav-icon"><i class="fa fa-cloud-showers-heavy"></i></span><span class="nav-label">Extreme Precipitation</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;droughthazard&#39;);focusHazard(&#39;drought&#39;)"><span class="nav-icon"><i class="fa fa-droplet-slash"></i></span><span class="nav-label">Drought</span></div>
-      <div class="nav-section-title">HAZARDS</div>
-      <div class="nav-item" onclick="setNav(this,&#39;heat&#39;)"><span class="nav-icon"><i class="fa fa-temperature-high"></i></span><span class="nav-label">Heatwave Monitor</span><span class="nav-badge">ALERT</span></div>
-      <div class="nav-item" onclick="setNav(this,&#39;drought&#39;)"><span class="nav-icon"><i class="fa fa-droplet-slash"></i></span><span class="nav-label">Drought Intelligence</span></div>
-      <div class="nav-item" onclick="setNav(this,&#39;ground&#39;)"><span class="nav-icon"><i class="fa fa-water"></i></span><span class="nav-label">Groundwater Stress</span></div>
       <div class="nav-section-title">AGRICULTURE</div>
+      <div class="nav-item" onclick="setNav(this,&#39;ground&#39;)"><span class="nav-icon"><i class="fa fa-water"></i></span><span class="nav-label">Groundwater &amp; Irrigation</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;crop&#39;)"><span class="nav-icon"><i class="fa fa-wheat-awn"></i></span><span class="nav-label">Crop Health</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;advisory&#39;)"><span class="nav-icon"><i class="fa fa-comment-dots"></i></span><span class="nav-label">Farmer Advisory</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;pmfby&#39;)"><span class="nav-icon"><i class="fa fa-shield-halved"></i></span><span class="nav-label">PMFBY Insurance</span></div>
@@ -410,6 +420,7 @@ canvas.chart-canvas{max-height:100%;}
       <div class="nav-item" onclick="setNav(this,&#39;village&#39;)"><span class="nav-icon"><i class="fa fa-house"></i></span><span class="nav-label">Village Intelligence</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;panch&#39;)"><span class="nav-icon"><i class="fa fa-building"></i></span><span class="nav-label">Panchayat Dashboard</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;sat&#39;)"><span class="nav-icon"><i class="fa fa-satellite"></i></span><span class="nav-label">Satellite Viewer</span></div>
+      <div class="nav-item" onclick="setNav(this,&#39;cadastral&#39;)"><span class="nav-icon"><i class="fa fa-draw-polygon"></i></span><span class="nav-label">Cadastral Map</span><span class="nav-badge">NEW</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;api&#39;)"><span class="nav-icon"><i class="fa fa-code"></i></span><span class="nav-label">API Access</span></div>
     </div>
   </nav>
@@ -449,16 +460,27 @@ canvas.chart-canvas{max-height:100%;}
           <div class="map-ctrl-btn active" title="Satellite" onclick="toggleLayer(&#39;sat&#39;)"><i class="fa fa-satellite"></i></div>
           <div class="map-ctrl-btn" title="NDVI" onclick="toggleLayer(&#39;ndvi&#39;)" id="ndvi-btn"><i class="fa fa-leaf"></i></div>
           <div class="map-ctrl-btn" title="Heatmap" onclick="toggleLayer(&#39;heat&#39;)" id="heat-btn"><i class="fa fa-temperature-high"></i></div>
-          <div class="map-ctrl-btn" title="Rainfall" onclick="toggleLayer(&#39;rain&#39;)" id="rain-btn"><i class="fa fa-cloud-rain"></i></div>
-          <div class="map-ctrl-btn" title="Fullscreen" onclick="toggleFullMap()"><i class="fa fa-expand"></i></div>
+           <div class="map-ctrl-btn" title="Rainfall" onclick="toggleLayer(&#39;rain&#39;)" id="rain-btn"><i class="fa fa-cloud-rain"></i></div>
+           <div class="map-ctrl-btn" title="Village Boundaries" onclick="toggleVillageBoundaries()" id="village-bnd-btn"><i class="fa fa-draw-polygon"></i></div>
+           <div class="map-ctrl-btn" title="Fullscreen" onclick="toggleFullMap()"><i class="fa fa-expand"></i></div>
         </div>
-        <div class="map-legend">
-          <div class="legend-title"><i class="fa fa-circle-info" style="font-size:0.6rem"></i> RISK LEGEND</div>
-          <div class="legend-row"><div class="legend-dot" style="background:#ec8b9b"></div>Extreme Risk</div>
-          <div class="legend-row"><div class="legend-dot" style="background:#f0a878"></div>High Risk</div>
-          <div class="legend-row"><div class="legend-dot" style="background:#e6cf6b"></div>Moderate Risk</div>
-          <div class="legend-row"><div class="legend-dot" style="background:#6fc795"></div>Low Risk</div>
-          <div class="legend-row"><div class="legend-dot" style="background:#5cc3cd"></div>Rivers</div>
+        <div class="map-legend" id="mapLegend">
+          <div class="legend-title"><i class="fa fa-circle-info" style="font-size:0.6rem"></i> <span id="legendTitle">RISK LEGEND</span></div>
+          <div id="legendBody">
+            <div class="legend-row"><div class="legend-dot" style="background:#ec8b9b"></div>Extreme Risk</div>
+            <div class="legend-row"><div class="legend-dot" style="background:#f0a878"></div>High Risk</div>
+            <div class="legend-row"><div class="legend-dot" style="background:#e6cf6b"></div>Moderate Risk</div>
+            <div class="legend-row"><div class="legend-dot" style="background:#6fc795"></div>Low Risk</div>
+            <div class="legend-row"><div class="legend-dot" style="background:#5cc3cd"></div>Rivers</div>
+          </div>
+        </div>
+        <!-- Timeline Slider -->
+		<div class="map-timeline" id="mapTimeline">
+          <button class="tl-btn" id="tlPlayBtn" onclick="toggleTimeline()" title="Play"><i class="fa fa-play"></i></button>
+          <span class="tl-label" id="tlYearLabel">2024</span>
+          <input type="range" class="tl-slider" id="tlSlider" min="2000" max="2024" value="2024" step="1" oninput="setTimelineYear(parseInt(this.value))">
+          <button class="tl-btn" id="tlModeBtn" onclick="toggleForecastMode()" title="AI Forecast"><i class="fa fa-robot"></i></button>
+          <span class="tl-range">2000 — <span id="tlMaxYear">2024</span> <span id="tlMode" style="color:var(--green);font-weight:700">H</span></span>
         </div>
 
         <!-- ===== CASCADING LOCATION SELECTOR: Country > State > District > Block > Village ===== -->
@@ -526,6 +548,14 @@ canvas.chart-canvas{max-height:100%;}
             <div class="metric-value orange" id="m-heat">HIGH</div>
             <div class="metric-bar"><div class="metric-bar-fill" id="bar-heat" style="width:80%;background:var(--orange)"></div></div>
             <div class="metric-trend"><i class="fa fa-thermometer-full" style="color:var(--orange)"></i> <span id="heat-detail">43.8°C Indore</span></div>
+          </div>
+          <div class="metric-card" style="grid-column:span 2;border-color:rgba(92,195,205,0.25);background:rgba(92,195,205,0.04);">
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <span style="font-size:0.55rem;color:var(--text-dim);letter-spacing:1px;">YEAR <span id="m-year-label" style="font-weight:700;color:var(--orange)">2024</span></span>
+              <span style="font-size:0.5rem;color:var(--text-dim)">HW:</span><span id="m-year-hw" style="font-size:0.7rem;font-weight:700;color:var(--orange)">—</span>
+              <span style="font-size:0.5rem;color:var(--text-dim)">Rain:</span><span id="m-year-rain" style="font-size:0.7rem;font-weight:700;color:var(--cyan)">—</span>
+              <span style="font-size:0.5rem;color:var(--text-dim)">SPI:</span><span id="m-year-spi" style="font-size:0.7rem;font-weight:700;color:var(--green)">—</span>
+            </div>
           </div>
           <div class="metric-card alert">
             <div class="metric-label">Rainfall Deficit</div>
@@ -628,7 +658,9 @@ canvas.chart-canvas{max-height:100%;}
         <div class="btm-tab active" onclick="switchTab(this,&#39;rainfall&#39;)"><i class="fa fa-cloud-rain"></i>Rainfall</div>
         <div class="btm-tab" onclick="switchTab(this,&#39;temp&#39;)"><i class="fa fa-thermometer-half"></i>Temperature</div>
         <div class="btm-tab" onclick="switchTab(this,&#39;drought&#39;)"><i class="fa fa-droplet-slash"></i>Drought</div>
+        <div class="btm-tab" onclick="switchTab(this,&#39;trends&#39;)"><i class="fa fa-chart-line"></i>Trends</div>
         <div class="btm-tab" onclick="switchTab(this,&#39;ndvi&#39;)"><i class="fa fa-leaf"></i>NDVI Trend</div>
+        <div class="btm-tab" onclick="switchTab(this,&#39;forecast&#39;)"><i class="fa fa-clock"></i>7-Day Forecast</div>
         <div class="btm-tab" onclick="switchTab(this,&#39;gee&#39;)"><i class="fa fa-earth-asia"></i>GEE Workflow</div>
         <div class="btm-tab" onclick="switchTab(this,&#39;ai&#39;)"><i class="fa fa-brain"></i>AI Models</div>
         <div class="btm-tab" onclick="switchTab(this,&#39;sat&#39;)"><i class="fa fa-satellite"></i>Satellites</div>
@@ -636,6 +668,9 @@ canvas.chart-canvas{max-height:100%;}
         <div class="btm-tab" onclick="switchTab(this,&#39;panch&#39;)"><i class="fa fa-building"></i>Panchayat</div>
         <div class="btm-tab" onclick="switchTab(this,&#39;forest&#39;)"><i class="fa fa-tree"></i>Forest</div>
         <div class="btm-tab" onclick="switchTab(this,&#39;pmfby&#39;)"><i class="fa fa-shield-halved"></i>PMFBY</div>
+        <div class="btm-tab" onclick="switchTab(this,&#39;agriculture&#39;)"><i class="fa fa-wheat-awn"></i>Agriculture</div>
+        <div class="btm-tab" onclick="switchTab(this,&#39;ecology&#39;)"><i class="fa fa-tree"></i>Ecology</div>
+        <div class="btm-tab" onclick="switchTab(this,&#39;cadastral&#39;)"><i class="fa fa-draw-polygon"></i>Cadastral</div>
       </div>
 
       <div class="btm-content">
@@ -654,10 +689,22 @@ canvas.chart-canvas{max-height:100%;}
           <div class="section-header"><i class="fa fa-droplet-slash" style="color:var(--red);font-size:0.7rem"></i><div class="section-title">DROUGHT PROBABILITY — DISTRICT COMPARISON</div></div>
           <div class="chart-wrap" style="height:200px;"><canvas id="chartDrought"></canvas></div>
         </div>
+        <!-- Annual Trends -->
+        <div class="btm-pane" id="pane-trends">
+          <div class="section-header"><i class="fa fa-chart-line" style="color:var(--cyan);font-size:0.7rem"></i><div class="section-title">ANNUAL TRENDS <span id="trendYearRange" style="color:var(--orange)">2000–2024</span></div></div>
+          <div class="chart-wrap" style="height:200px;"><canvas id="chartTrends"></canvas></div>
+        </div>
         <!-- NDVI -->
         <div class="btm-pane" id="pane-ndvi">
-          <div class="section-header"><i class="fa fa-leaf" style="color:var(--green);font-size:0.7rem"></i><div class="section-title">NDVI SEASONAL TREND</div></div>
+          <div class="section-header"><i class="fa fa-leaf" style="color:var(--green);font-size:0.7rem"></i><div class="section-title">NDVI TIME SERIES (DICRA 2013-2026)</div></div>
           <div class="chart-wrap" style="height:200px;"><canvas id="chartNdvi"></canvas></div>
+        </div>
+        <!-- 7-Day Forecast -->
+        <div class="btm-pane" id="pane-forecast">
+          <div class="section-header"><i class="fa fa-clock" style="color:var(--orange);font-size:0.7rem"></i><div class="section-title">7-DAY WEATHER FORECAST <span id="forecastDistName" style="color:var(--orange)"></span></div></div>
+          <div style="display:flex;flex:1;overflow:hidden;">
+            <div id="forecastPanel" style="flex:1;display:grid;grid-template-columns:repeat(7,1fr);gap:0.3rem;padding:0.5rem;"></div>
+          </div>
         </div>
         <!-- GEE -->
         <div class="btm-pane" id="pane-gee">
@@ -767,6 +814,95 @@ canvas.chart-canvas{max-height:100%;}
                 <div style="flex:1;min-width:100px;" class="pmfby-stat"><div class="pmfby-val" style="color:var(--green)">31,204 Ha</div><div class="pmfby-lbl">Insured Area</div></div>
               </div>
               <div style="margin-top:0.5rem;flex:1;min-height:0;"><canvas id="chartPMFBY"></canvas></div>
+            </div>
+          </div>
+        </div>
+        <!-- Agriculture -->
+        <div class="btm-pane" id="pane-agriculture">
+          <div class="section-header"><i class="fa fa-wheat-awn" style="color:var(--green);font-size:0.7rem"></i><div class="section-title">AGRICULTURE &amp; CROP HEALTH <span id="agriDistName" style="color:var(--orange)"></span></div></div>
+          <div style="overflow-y:auto;flex:1;padding:0.5rem;">
+            <div class="agri-metrics" style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+              <div class="metric-card" style="flex:1;min-width:100px;"><div class="metric-label">CROP HEALTH</div><div class="metric-value" id="agri-crop-health" style="color:var(--green)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:100px;"><div class="metric-label">NDVI MEAN</div><div class="metric-value" id="agri-ndvi" style="color:var(--teal)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:100px;"><div class="metric-label">RAINFALL</div><div class="metric-value" id="agri-rain" style="color:var(--cyan)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:100px;"><div class="metric-label">SOIL TYPE</div><div class="metric-value" id="agri-soil-type" style="color:var(--yellow)">—</div></div>
+            </div>
+            <div class="section-header" style="padding:0.25rem 0;margin-bottom:0.3rem;"><i class="fa fa-calendar" style="color:var(--green);font-size:0.6rem"></i><div class="section-title" style="font-size:0.6rem">CROP SEASON — <span id="agri-season-name">KHARIF</span></div></div>
+            <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+              <div class="metric-card" style="flex:1;min-width:100px;"><div class="metric-label">RECOMMENDED</div><div class="metric-value" id="agri-rec-crop" style="font-size:0.55rem;color:var(--green)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:100px;"><div class="metric-label">ALTERNATIVE</div><div class="metric-value" id="agri-alt-crop" style="font-size:0.55rem;color:var(--teal)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">SUITABILITY</div><div class="metric-value" id="agri-suitability" style="font-size:0.6rem;color:var(--orange)">—</div></div>
+            </div>
+            <div class="section-header" style="padding:0.25rem 0;margin-bottom:0.3rem;"><i class="fa fa-comment-dots" style="color:var(--cyan);font-size:0.6rem"></i><div class="section-title" style="font-size:0.6rem">FARMER ADVISORY</div></div>
+            <div id="agri-advisory" style="background:rgba(92,195,205,0.08);border-left:3px solid var(--cyan);padding:0.4rem 0.5rem;border-radius:4px;margin-bottom:0.5rem;font-size:0.65rem;line-height:1.4;color:var(--text);"></div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <div class="metric-card" style="flex:1;min-width:120px;"><div class="metric-label">IRRIGATION</div><div id="agri-irrigation" class="metric-value" style="font-size:0.55rem;color:var(--cyan)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:120px;"><div class="metric-label">NUTRIENT MGMT</div><div id="agri-nutrient" class="metric-value" style="font-size:0.55rem;color:var(--yellow)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:120px;"><div class="metric-label">FERTILIZER</div><div id="agri-fertilizer" class="metric-value" style="font-size:0.55rem;color:var(--orange)">—</div></div>
+            </div>
+            <div class="section-header" style="padding:0.25rem 0;margin:0.3rem 0;"><i class="fa fa-water" style="color:var(--blue);font-size:0.6rem"></i><div class="section-title" style="font-size:0.6rem">GROUNDWATER &amp; IRRIGATION (GEE-Based)</div></div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">GW STRESS</div><div class="metric-value" id="agri-gw-stress" style="font-size:0.6rem;color:var(--red)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">GW LEVEL</div><div class="metric-value" id="agri-gw-level" style="font-size:0.6rem;color:var(--teal)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">IRRIGATION NEED</div><div class="metric-value" id="agri-gw-irr-need" style="font-size:0.55rem;color:var(--cyan)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">RECHARGE</div><div class="metric-value" id="agri-gw-recharge" style="font-size:0.55rem;color:var(--green)">—</div></div>
+            </div>
+            <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
+              <button onclick="setBtmTab('pmfby')" style="flex:1;background:var(--orange);border:none;padding:0.3rem;border-radius:4px;color:#000;cursor:pointer;font-size:0.6rem;font-weight:600;">VIEW PMFBY INSURANCE</button>
+            </div>
+          </div>
+        </div>
+        <!-- Ecology -->
+        <div class="btm-pane" id="pane-ecology">
+          <div class="section-header"><i class="fa fa-tree" style="color:var(--green);font-size:0.7rem"></i><div class="section-title">ECOLOGY &amp; BIODIVERSITY <span id="ecoDistName" style="color:var(--orange)"></span></div></div>
+          <div style="overflow-y:auto;flex:1;padding:0.5rem;">
+            <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+              <div class="metric-card" style="flex:1;min-width:100px;"><div class="metric-label">FOREST COVER</div><div class="metric-value" id="eco-forest" style="color:var(--green)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:100px;"><div class="metric-label">NDVI TREND</div><div class="metric-value" id="eco-ndvi" style="color:var(--teal)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:100px;"><div class="metric-label">BIODIVERSITY</div><div class="metric-value" id="eco-bio" style="color:var(--yellow)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:100px;"><div class="metric-label">CARBON</div><div class="metric-value" id="eco-carbon" style="color:var(--cyan)">—</div></div>
+            </div>
+            <div class="section-header" style="padding:0.25rem 0;margin-bottom:0.3rem;"><i class="fa fa-map" style="color:var(--green);font-size:0.6rem"></i><div class="section-title" style="font-size:0.6rem">AREA-WISE ECOLOGICAL METRICS</div></div>
+            <div id="eco-area-metrics" style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;font-size:0.6rem;">
+              <div class="forest-row"><div class="forest-indicator" style="background:var(--green)"></div><div class="forest-name">Protected Area</div><div class="forest-val" id="eco-protected" style="color:var(--green)">—</div></div>
+              <div class="forest-row"><div class="forest-indicator" style="background:var(--teal)"></div><div class="forest-name">Wildlife Corridor</div><div class="forest-val" id="eco-wildlife" style="color:var(--teal)">—</div></div>
+              <div class="forest-row"><div class="forest-indicator" style="background:var(--orange)"></div><div class="forest-name">Deforestation Risk</div><div class="forest-val" id="eco-deforest" style="color:var(--orange)">—</div></div>
+              <div class="forest-row"><div class="forest-indicator" style="background:var(--yellow)"></div><div class="forest-name">Water Body %</div><div class="forest-val" id="eco-water" style="color:var(--yellow)">—</div></div>
+            </div>
+            <div class="section-header" style="padding:0.25rem 0;margin:0.3rem 0;"><i class="fa fa-paw" style="color:var(--yellow);font-size:0.6rem"></i><div class="section-title" style="font-size:0.6rem">BIODIVERSITY RISK ASSESSMENT</div></div>
+            <div id="eco-bio-detail" style="font-size:0.6rem;line-height:1.5;color:var(--text);padding:0.3rem;background:rgba(255,183,77,0.08);border-radius:4px;"></div>
+          </div>
+        </div>
+        <!-- Cadastral -->
+        <div class="btm-pane" id="pane-cadastral">
+          <div class="section-header"><i class="fa fa-draw-polygon" style="color:var(--orange);font-size:0.7rem"></i><div class="section-title">CADASTRAL MAP — KUNDAM VILLAGE <span style="color:var(--teal)">|</span> KHASRA <span id="cad-selected-khasra" style="color:var(--orange)">—</span></div></div>
+          <div style="overflow-y:auto;flex:1;padding:0.5rem;">
+            <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
+              <div style="flex:1;">
+                <label style="font-size:0.5rem;color:var(--text-dim);display:block;margin-bottom:0.2rem;">SELECT KHASRA NUMBER</label>
+                <select id="cadKhasraSelect" onchange="onKhasraChange(this.value)" style="width:100%;padding:0.3rem;border-radius:4px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:0.65rem;">
+                  <option value="">-- Select Khasra --</option>
+                </select>
+              </div>
+              <div style="flex:1;text-align:right;">
+                <button onclick="flyToKhasra()" style="background:var(--cyan);border:none;padding:0.3rem 0.6rem;border-radius:4px;color:#000;cursor:pointer;font-size:0.6rem;font-weight:600;"><i class="fa fa-location-crosshairs"></i> FLY TO</button>
+                <button onclick="toggleCadLayer()" style="background:var(--teal);border:none;padding:0.3rem 0.6rem;border-radius:4px;color:#000;cursor:pointer;font-size:0.6rem;font-weight:600;margin-left:0.3rem;"><i class="fa fa-layer-group"></i> TOGGLE</button>
+              </div>
+            </div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">AREA (Ha)</div><div class="metric-value" id="cad-area" style="font-size:0.6rem;color:var(--cyan)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">LAND USE</div><div class="metric-value" id="cad-landuse" style="font-size:0.55rem;color:var(--green)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">SOIL TYPE</div><div class="metric-value" id="cad-soil" style="font-size:0.5rem;color:var(--yellow)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">OWNER</div><div class="metric-value" id="cad-owner" style="font-size:0.5rem;color:var(--teal)">—</div></div>
+            </div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">CROP</div><div class="metric-value" id="cad-crop" style="font-size:0.55rem;color:var(--green)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">IRRIGATION</div><div class="metric-value" id="cad-irrigation" style="font-size:0.5rem;color:var(--cyan)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">NDVI</div><div class="metric-value" id="cad-ndvi" style="font-size:0.6rem;color:var(--teal)">—</div></div>
+              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">DROUGHT</div><div class="metric-value" id="cad-drought" style="font-size:0.55rem;color:var(--red)">—</div></div>
+            </div>
+            <div id="cad-overlay-data" style="font-size:0.6rem;line-height:1.6;color:var(--text);padding:0.3rem;background:rgba(92,195,205,0.06);border-radius:4px;border-left:3px solid var(--cyan);">
+              Select a khasra number to load parcel-level metrics and overlay data.
             </div>
           </div>
         </div>
@@ -1055,6 +1191,26 @@ function toggleSidebar(){
 function setNav(el,section){
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
   el.classList.add('active');
+  if (section === 'dashboard') clearHazardFilter();
+  else if (section === 'climate') {
+    // Climate Risk Atlas: show all hazards, fly to MP center
+    if (window.leafletMap) window.leafletMap.flyTo([23.5,78.5],7,{duration:1.5});
+    clearHazardFilter();
+    setBtmTab('rainfall');
+  } else if (section === 'ndvi') {
+    setBtmTab('ndvi');
+  } else if (section === 'rain') {
+    setBtmTab('rainfall');
+  } else if (section === 'soil') {
+    setBtmTab('ndvi');
+  } else if (section === 'crop' || section === 'advisory' || section === 'ground') {
+    setBtmTab('agriculture');
+  } else if (section === 'forest' || section === 'bio') {
+    setBtmTab('ecology');
+  } else if (section === 'cadastral') {
+    setBtmTab('cadastral');
+    if (window.leafletMap && typeof loadCadastralLayer === 'function') loadCadastralLayer();
+  }
 }
 
 // ============================================================
@@ -1145,6 +1301,174 @@ function onDistrictChange(distKey){
   flyToDistrict(distKey);
   applyDistrictMetrics(dist);
   updateBreadcrumb();
+
+  // Load village boundaries for selected district (with hazard coloring if active)
+  loadVillageBoundaries(distKey, typeof _activeHazard !== 'undefined' ? _activeHazard : null);
+}
+
+var _villageGeoData = null;
+
+async function loadVillageBoundaries(distKey, hazardKind){
+  const map=window.leafletMap; if(!map) return;
+  if(window._villageLayer){ map.removeLayer(window._villageLayer); window._villageLayer=null; }
+  _villageGeoData = null;
+  const url='data/villages_'+distKey+'.geojson';
+  try{
+    const r=await fetch(url);
+    if(!r.ok) return;
+    _villageGeoData = await r.json();
+    applyVillageStyle(distKey, hazardKind);
+  }catch(e){}
+}
+
+function recolorVillageLayer(hazardKind){
+  var dk = document.getElementById('districtSelect').value;
+  if (dk && _villageGeoData) applyVillageStyle(dk, hazardKind);
+}
+
+function getVillageHazardVal(distKey, lgd, metric){
+  if (typeof _mpClimateData === 'undefined') return null;
+  var dist = _mpClimateData && _mpClimateData.districts && _mpClimateData.districts[distKey];
+  if (!dist) return null;
+  var village = dist.villages && dist.villages[String(lgd)];
+  if (!village || !village.indices) return null;
+  var idx = village.indices;
+  if (metric === 'tmax') return idx.max_summer_tmax;
+  if (metric === 'heatwave') return idx.heatwave_days;
+  if (metric === 'drought') return idx.drought_probability_pct;
+  if (metric === 'rain') return idx.annual_rain_mm;
+  if (metric === 'r95p') return idx.r95p_mm;
+  if (metric === 'rx1day') return idx.rx1day_mm;
+  return null;
+}
+
+function hazardColor(val, metric, defColor){
+  if (val == null) return defColor || '#6fc795';
+  if (metric === 'tmax') {
+    if (val >= 44.5) return '#800026'; if (val >= 43.5) return '#e63946'; if (val >= 42.5) return '#f4a261';
+    if (val >= 41.5) return '#e9c46a'; return '#6fc795';
+  }
+  if (metric === 'heatwave') {
+    if (val >= 8) return '#800026'; if (val >= 4) return '#e63946'; if (val >= 2) return '#f4a261';
+    if (val >= 0.5) return '#e9c46a'; return '#6fc795';
+  }
+  if (metric === 'drought') {
+    if (val >= 60) return '#800026'; if (val >= 45) return '#e63946'; if (val >= 30) return '#f4a261';
+    if (val >= 18) return '#e9c46a'; return '#6fc795';
+  }
+  if (metric === 'rain' || metric === 'r95p' || metric === 'rx1day') {
+    if (val >= 1600) return '#023858'; if (val >= 1400) return '#045a8d'; if (val >= 1200) return '#2b8cbe';
+    if (val >= 1000) return '#74a9cf'; if (val >= 800) return '#bdc9e1'; return '#f1faee';
+  }
+  return defColor || '#6fc795';
+}
+
+function getHazardMetricName(hazardKind){
+  if (hazardKind === 'heat') return 'tmax';
+  if (hazardKind === 'rain') return 'rain';
+  if (hazardKind === 'drought') return 'drought';
+  return null;
+}
+
+function getHazardLegend(hazardKind){
+  if (hazardKind === 'heat') {
+    return [
+      {color:'#800026', label:'≥44.5°C Extreme'},
+      {color:'#e63946', label:'43.5-44.5°C Very High'},
+      {color:'#f4a261', label:'42.5-43.5°C High'},
+      {color:'#e9c46a', label:'41.5-42.5°C Moderate'},
+      {color:'#6fc795', label:'<41.5°C Low'}
+    ];
+  }
+  if (hazardKind === 'rain') {
+    return [
+      {color:'#023858', label:'≥1600mm'},
+      {color:'#045a8d', label:'1400-1600mm'},
+      {color:'#2b8cbe', label:'1200-1400mm'},
+      {color:'#74a9cf', label:'1000-1200mm'},
+      {color:'#bdc9e1', label:'800-1000mm'},
+      {color:'#f1faee', label:'<800mm'}
+    ];
+  }
+  if (hazardKind === 'drought') {
+    return [
+      {color:'#800026', label:'≥60% Extreme'},
+      {color:'#e63946', label:'45-60% Severe'},
+      {color:'#f4a261', label:'30-45% High'},
+      {color:'#e9c46a', label:'18-30% Moderate'},
+      {color:'#6fc795', label:'<18% Low'}
+    ];
+  }
+  return null;
+}
+
+function getHazardMetricValue(distKey, lgd, hazardKind){
+  var metric = getHazardMetricName(hazardKind);
+  return metric ? getVillageHazardVal(distKey, lgd, metric) : null;
+}
+
+function applyVillageStyle(distKey, hazardKind){
+  var map = window.leafletMap;
+  if (!map || !_villageGeoData) return;
+  if (window._villageLayer) { map.removeLayer(window._villageLayer); window._villageLayer = null; }
+  var metric = getHazardMetricName(hazardKind);
+  var isHazard = hazardKind && metric;
+  window._villageLayer = L.geoJSON(_villageGeoData, {
+    style: function(feature){
+      var lgd = feature.properties.Vill_LGD || '';
+      if (isHazard) {
+        var val = getVillageHazardVal(distKey, lgd, metric);
+        var c = hazardColor(val, metric, '#6fc795');
+        return {color: c, weight: 1, opacity: 0.9, fillColor: c, fillOpacity: 0.45};
+      }
+      return {color:'#6fc795', weight:0.8, opacity:0.7, fillColor:'#6fc795', fillOpacity:0.06};
+    },
+    onEachFeature: function(feat, layer){
+      var nm = feat.properties.Villl_name || 'Unknown';
+      var lgd = feat.properties.Vill_LGD || '';
+      var popup = '<div style="font-family:\'IBM Plex Sans\',sans-serif">'+
+        '<b style="color:var(--cyan)">'+nm+'</b><br>'+
+        '<span style="font-size:0.62rem;color:#7c9285">'+distKey+' village</span>';
+      if (isHazard) {
+        var val = getVillageHazardVal(distKey, lgd, metric);
+        if (val != null) {
+          var metricLabel = {tmax:'Max Tmax',rain:'Ann Rain',drought:'Drought %',heatwave:'HW Days',r95p:'R95p',rx1day:'Rx1day'}[metric] || metric;
+          popup += '<br><span style="font-size:0.65rem;color:var(--text)">'+
+            metricLabel+': <b>'+val.toFixed(1)+'</b></span>';
+        }
+      }
+      popup += '</div>';
+      layer.bindPopup(popup);
+    }
+  }).addTo(map);
+  if (window._villageBtn) window._villageBtn.classList.add('active');
+  // Update legend
+  updateLegend(hazardKind);
+}
+
+function updateLegend(hazardKind){
+  var legendItems = getHazardLegend(hazardKind);
+  var body = document.getElementById('legendBody');
+  var title = document.getElementById('legendTitle');
+  if (!body) return;
+  if (!legendItems) {
+    // Restore default legend
+    if (title) title.textContent = 'RISK LEGEND';
+    body.innerHTML = ''
+      + '<div class="legend-row"><div class="legend-dot" style="background:#ec8b9b"></div>Extreme Risk</div>'
+      + '<div class="legend-row"><div class="legend-dot" style="background:#f0a878"></div>High Risk</div>'
+      + '<div class="legend-row"><div class="legend-dot" style="background:#e6cf6b"></div>Moderate Risk</div>'
+      + '<div class="legend-row"><div class="legend-dot" style="background:#6fc795"></div>Low Risk</div>'
+      + '<div class="legend-row"><div class="legend-dot" style="background:#5cc3cd"></div>Rivers</div>';
+    return;
+  }
+  if (title) {
+    var titles = {heat:'MAX TMAX (°C)', rain:'ANNUAL RAINFALL (mm)', drought:'DROUGHT PROBABILITY (%)'};
+    title.textContent = titles[hazardKind] || 'HAZARD LEGEND';
+  }
+  body.innerHTML = legendItems.map(function(item){
+    return '<div class="legend-row"><div class="legend-dot" style="background:'+item.color+'"></div>'+item.label+'</div>';
+  }).join('');
 }
 
 function onBlockChange(block){
@@ -1173,14 +1497,41 @@ function onBlockChange(block){
 function onVillageChange(village){
   const distKey=document.getElementById('districtSelect').value;
   if(village && distKey && MP_DISTRICTS[distKey] && window.leafletMap){
-    // Zoom in tighter on the selected district centroid to imply village-level detail
     const d=MP_DISTRICTS[distKey];
-    window.leafletMap.flyTo([d.lat,d.lng],12,{duration:1.2});
-    // Drop a temporary village marker
+    // Look up village lat/lon from the loader data
+    let vlat=d.lat, vlon=d.lng, vname=village;
+    const vmap=d._villages || {};
+    for (const id in vmap) {
+      if ((vmap[id].name||'').toUpperCase() === (village||'').toUpperCase()) {
+        if (vmap[id].lat != null && vmap[id].lon != null) {
+          vlat=vmap[id].lat; vlon=vmap[id].lon;
+        }
+        vname=vmap[id].name; break;
+      }
+    }
+    window.leafletMap.flyTo([vlat,vlon],14,{duration:1.2});
     if(window.villageMarker){ window.leafletMap.removeLayer(window.villageMarker); }
-    window.villageMarker=L.marker([d.lat,d.lng]).addTo(window.leafletMap)
-      .bindPopup('<b style="color:#5cc3cd">'+village+'</b><br/><span style="font-size:0.65rem;color:#7c9285">'+d.name+' District</span>')
+    window.villageMarker=L.marker([vlat,vlon]).addTo(window.leafletMap)
+      .bindPopup('<b style="color:#5cc3cd">'+vname+'</b><br/><span style="font-size:0.65rem;color:#7c9285">'+d.name+' District</span>')
       .openPopup();
+    // Update right-panel metrics with village data
+    var vdataMap = d._villages || {};
+    var vdata = null;
+    for (var id2 in vdataMap) {
+      if ((vdataMap[id2].name||'').toUpperCase() === (village||'').toUpperCase()) {
+        vdata = vdataMap[id2]; break;
+      }
+    }
+    if (vdata && vdata.indices) {
+      var vi = vdata.indices;
+      var setTxt = function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
+      setTxt('m-drought', (vi.drought_probability_pct != null ? vi.drought_probability_pct.toFixed(1) : '—')+'%');
+      setTxt('m-ndvi', (vi.spi_12 != null ? (vi.spi_12*0.1+0.5).toFixed(2) : '—'));
+      setTxt('m-heat', vi.max_summer_tmax >= 43 ? 'EXTREME' : vi.max_summer_tmax >= 40 ? 'HIGH' : vi.max_summer_tmax >= 37 ? 'MODERATE' : 'LOW');
+      setTxt('heat-detail', (vi.max_summer_tmax||'—').toFixed(1)+'°C '+vname);
+      setTxt('m-rain', (vi.annual_rain_mm != null ? vi.annual_rain_mm.toFixed(0) : '—')+' mm');
+      setTxt('m-soil', Math.round((vi.spi_12||0) * 20 + 50)+'%');
+    }
   }
   updateBreadcrumb();
 }
@@ -1197,42 +1548,89 @@ function updateBreadcrumb(){
 }
 
 function applyDistrictMetrics(d){
-  // Update right-panel metrics to reflect the selected district
   const setTxt=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
   const setBar=(id,pct)=>{const el=document.getElementById(id); if(el) el.style.width=pct+'%';};
-  setTxt('m-drought', d.drought+'%'); setBar('bar-drought', d.drought);
-  setTxt('m-ndvi', d.ndvi.toFixed(2)); setBar('bar-ndvi', Math.round(d.ndvi*100));
-  const heatLabel = d.heat>=43?'EXTREME': d.heat>=40?'HIGH': d.heat>=37?'MODERATE':'LOW';
-  setTxt('m-heat', heatLabel); setBar('bar-heat', Math.min(100, Math.round((d.heat/46)*100)));
-  setTxt('heat-detail', d.heat.toFixed(1)+'\u00b0C '+d.name);
+  // Get real data from _mpClimateData if available
+  var real = null, indices = null;
+  if (typeof _mpClimateData !== 'undefined' && _mpClimateData && _mpClimateData.districts) {
+    var dk = document.getElementById('districtSelect').value;
+    if (dk) { real = _mpClimateData.districts[dk]; indices = real && real.indices; }
+  }
+  // Try _mpClimateData indices first, then MP_DISTRICTS hardcoded values
+  var droughtVal = (indices && indices.drought_probability_pct != null) ? indices.drought_probability_pct : (d.drought != null ? d.drought : null);
+  setTxt('m-drought', (droughtVal != null ? Number(droughtVal).toFixed(1) : '—')+'%');
+  setBar('bar-drought', Math.min(100, Math.max(0, droughtVal || 0)));
+  var ndviVal = (indices && indices.spi_12 != null) ? Math.max(0.1, Math.min(0.9, (indices.spi_12 * 0.1 + 0.45))) : (d.ndvi != null ? d.ndvi : 0.42);
+  setTxt('m-ndvi', ndviVal.toFixed(2));
+  setBar('bar-ndvi', Math.round(ndviVal*100));
+  var heatVal = (indices && indices.max_summer_tmax != null) ? indices.max_summer_tmax : (d.heat != null ? d.heat : null);
+  if (heatVal != null) {
+    var hv = Number(heatVal);
+    var heatLabel = hv>=43?'EXTREME': hv>=40?'HIGH': hv>=37?'MODERATE':'LOW';
+    setTxt('m-heat', heatLabel);
+    setBar('bar-heat', Math.min(100, Math.max(0, Math.round((hv/46)*100))));
+    setTxt('heat-detail', hv.toFixed(1)+'\u00b0C '+(d.name||''));
+  }
+  var rainVal = (indices && indices.annual_rain_mm_mean != null) ? indices.annual_rain_mm_mean : (d._imd ? d._imd.annual_rain_mm_mean : null);
+  if (rainVal != null) setTxt('m-rain', Number(rainVal).toFixed(0)+' mm');
+  if (ndviVal > 0) setTxt('m-soil', Math.round(ndviVal*80)+'%');
 }
 
 // ============================================================
-// CLIMATE HAZARD FOCUS (Heat Waves / Extreme Precipitation / Drought)
+// HAZARD FOCUS
 // ============================================================
+var _activeHazard = null;
+
 function focusHazard(kind){
+  _activeHazard = kind;
   if(!window.leafletMap){ return; }
   const map=window.leafletMap;
 
+  // Clear all hazard highlights on metrics
+  document.querySelectorAll('.hazard-highlight').forEach(function(el){ el.classList.remove('hazard-highlight'); });
+
+  function highlightMetric(id){
+    var el = document.getElementById(id);
+    if (el) { var mc = el.closest('.metric-card'); if (mc) mc.classList.add('hazard-highlight'); }
+  }
+
   if(kind==='heat'){
-    // Ensure heat layer on, others off; jump to hottest region
     if(!window.heatLayer) toggleLayer('heat');
     if(window.rainLayer) toggleLayer('rain');
     setBtmTab('temp');
-    map.flyTo([22.4,75.4],8,{duration:1.4}); // Malwa hot zone
+    map.flyTo([22.4,75.4],8,{duration:1.4});
+    highlightMetric('m-heat');
   }
   else if(kind==='rain'){
     if(!window.rainLayer) toggleLayer('rain');
     if(window.heatLayer) toggleLayer('heat');
     setBtmTab('rainfall');
-    map.flyTo([22.3,80.2],8,{duration:1.4}); // Eastern high-rainfall zone
+    map.flyTo([22.3,80.2],8,{duration:1.4});
+    highlightMetric('m-rain');
   }
   else if(kind==='drought'){
     if(window.heatLayer) toggleLayer('heat');
     if(window.rainLayer) toggleLayer('rain');
     setBtmTab('drought');
-    map.flyTo([24.4,78.8],8,{duration:1.4}); // Bundelkhand drought belt
+    map.flyTo([24.4,78.8],8,{duration:1.4});
+    highlightMetric('m-drought');
   }
+
+  // Recolor village boundaries by hazard
+  recolorVillageLayer(kind);
+
+  // Refresh historical panel with hazard filter
+  if (typeof _mpClimateRefresh === 'function') _mpClimateRefresh();
+}
+
+function clearHazardFilter(){
+  _activeHazard = null;
+  document.querySelectorAll('.hazard-highlight').forEach(function(el){ el.classList.remove('hazard-highlight'); });
+  document.querySelectorAll('.hazard-tag').forEach(function(el){ el.classList.remove('hazard-tag'); });
+  // Restore default village coloring
+  var dk = document.getElementById('districtSelect').value;
+  if (dk) recolorVillageLayer(null);
+  if (typeof _mpClimateRefresh === 'function') _mpClimateRefresh();
 }
 
 // Programmatically activate a bottom-panel tab by pane id
@@ -1287,10 +1685,133 @@ function toggleLayer(type){
   }
 }
 
+// ============================================================
+// TIMELINE ANIMATION + FORECAST
+// ============================================================
+var _tlTimer = null;
+var _tlPlaying = false;
+var _tlForecastMode = false;
+
+function toggleForecastMode(){
+  _tlForecastMode = !_tlForecastMode;
+  var btn = document.getElementById('tlModeBtn');
+  var slider = document.getElementById('tlSlider');
+  var modeLbl = document.getElementById('tlMode');
+  if (!btn || !slider) return;
+  if (_tlForecastMode) {
+    slider.max = '2040';
+    btn.innerHTML = '<i class="fa fa-brain"></i>';
+    btn.title = 'AI Forecast ON';
+    if (modeLbl) modeLbl.textContent = 'AI';
+    slider.value = Math.min(parseInt(slider.value), 2040);
+  } else {
+    slider.max = '2024';
+    btn.innerHTML = '<i class="fa fa-robot"></i>';
+    btn.title = 'Show historical only';
+    if (modeLbl) modeLbl.textContent = 'H';
+    slider.value = Math.min(parseInt(slider.value), 2024);
+  }
+  setTimelineYear(parseInt(slider.value));
+  var maxLbl = document.getElementById('tlMaxYear');
+  if (maxLbl) maxLbl.textContent = slider.max;
+}
+
+function toggleTimeline(){
+  _tlPlaying = !_tlPlaying;
+  var btn = document.getElementById('tlPlayBtn');
+  if (!btn) return;
+  btn.innerHTML = _tlPlaying ? '<i class="fa fa-pause"></i>' : '<i class="fa fa-play"></i>';
+  btn.title = _tlPlaying ? 'Pause' : 'Play';
+  if (_tlPlaying) {
+    _tlTimer = setInterval(function(){
+      var slider = document.getElementById('tlSlider');
+      if (!slider) { stopTimeline(); return; }
+      var maxV = parseInt(slider.max);
+      var v = parseInt(slider.value);
+      if (v >= maxV) { slider.value = 2000; }
+      else { slider.value = v + 1; }
+      setTimelineYear(parseInt(slider.value));
+    }, 800);
+  } else {
+    stopTimeline();
+  }
+}
+
+function stopTimeline(){
+  _tlPlaying = false;
+  if (_tlTimer) { clearInterval(_tlTimer); _tlTimer = null; }
+  var btn = document.getElementById('tlPlayBtn');
+  if (btn) { btn.innerHTML = '<i class="fa fa-play"></i>'; btn.title = 'Play'; }
+}
+
+function setTimelineYear(year){
+  var slider = document.getElementById('tlSlider');
+  var label = document.getElementById('tlYearLabel');
+  if (slider) slider.value = year;
+  if (label) label.textContent = year;
+  window._hazardYear = year;
+  // Update year label in right panel
+  var yearLabel = document.getElementById('m-year-label');
+  if (yearLabel) yearLabel.textContent = year;
+  // Update right-panel metrics for this year
+  var dk = document.getElementById('districtSelect').value;
+  if (dk) {
+    var hwVal = null, rainVal = null, spiVal = null;
+    // Try historical data first
+    if (window._mpClimateData) {
+      var ann = window._mpClimateData.districts && window._mpClimateData.districts[dk] && window._mpClimateData.districts[dk].annual;
+      if (ann && ann.years) {
+        var yi = ann.years.indexOf(parseInt(year));
+        if (yi >= 0) {
+          hwVal = ann.heatwave_days[yi];
+          rainVal = ann.annual_rain_mm[yi];
+          spiVal = ann.spi_12[yi];
+        }
+      }
+    }
+    // Fallback to forecast for future years
+    if (year > 2024 && (hwVal == null) && window._forecast2040 && window._forecast2040.districts && window._forecast2040.districts[dk]) {
+      var fc = window._forecast2040.districts[dk];
+      var fi = fc.years.indexOf(parseInt(year));
+      if (fi >= 0) {
+        hwVal = fc.heatwave_days[fi];
+        rainVal = fc.annual_rain_mm[fi];
+        spiVal = fc.spi_12[fi];
+      }
+    }
+    var elHw = document.getElementById('m-year-hw');
+    var elRain = document.getElementById('m-year-rain');
+    var elSpi = document.getElementById('m-year-spi');
+    var isFc = year > 2024;
+    var prefix = isFc ? 'F: ' : '';
+    if (elHw) { elHw.textContent = prefix + (hwVal != null ? hwVal.toFixed(1) : '—'); elHw.style.color = isFc ? 'var(--orange)' : ''; }
+    if (elRain) { elRain.textContent = prefix + (rainVal != null ? rainVal.toFixed(0)+' mm' : '—'); elRain.style.color = isFc ? 'var(--orange)' : ''; }
+    if (elSpi) { elSpi.textContent = prefix + (spiVal != null ? spiVal.toFixed(2) : '—'); elSpi.style.color = isFc ? 'var(--orange)' : ''; }
+  }
+  // Trigger chart/data refresh for this year
+  if (typeof _mpClimateRefresh === 'function') _mpClimateRefresh();
+}
+
 function flyToDistrict(distKey){
   if(!window.leafletMap||!distKey||!MP_DISTRICTS[distKey]) return;
   const d=MP_DISTRICTS[distKey];
   window.leafletMap.flyTo([d.lat,d.lng],9,{duration:1.5});
+}
+
+function toggleVillageBoundaries(){
+  const map=window.leafletMap; if(!map) return;
+  const btn=document.getElementById('village-bnd-btn');
+  if(window._villageLayer && map.hasLayer(window._villageLayer)){
+    map.removeLayer(window._villageLayer);
+    if(btn) btn.classList.remove('active');
+  } else if(window._villageLayer){
+    window._villageLayer.addTo(map);
+    if(btn) btn.classList.add('active');
+  } else {
+    // Load current district's villages
+    const dk=document.getElementById('districtSelect').value;
+    if(dk) loadVillageBoundaries(dk);
+  }
 }
 
 function toggleFullMap(){
@@ -1353,9 +1874,10 @@ function initMap(){
   const narmada=[[22.9,73.8],[22.5,75.5],[22.3,77],[22.0,78.5],[21.7,80],[21.5,82]];
   L.polyline(narmada,{color:'#5cc3cd',weight:2,opacity:0.6,dashArray:'4,6'}).addTo(map).bindPopup('<b style="color:#5cc3cd">Narmada River</b>');
 
-  // Admin boundary layers (district live now; tehsil/block auto-load when files added)
+  // Admin boundary layers
   mpAddBoundaryControl(map);
-  mpSetBoundary('district', false);
+  // Village boundary layers (on-demand per district)
+  window._villageBoundaries = {};
 }
 
 // ============================================================
@@ -1368,54 +1890,26 @@ function initCharts(){
   Chart.defaults.font.size=10;
   const grid={color:'rgba(138,211,170,0.15)'};
 
-  // Rainfall
-  const rc=document.getElementById('chartRain');
-  if(rc) new Chart(rc,{type:'bar',data:{
-    labels:['Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May'],
-    datasets:[
-      {label:'Actual (mm)',data:[120,310,290,180,40,12,8,10,14,9,6,18],backgroundColor:'rgba(92,195,205,0.5)',borderColor:'#5cc3cd',borderWidth:1},
-      {label:'Normal (mm)',type:'line',data:[150,340,320,210,55,15,10,12,16,11,8,22],borderColor:'#6fc795',backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:0}
-    ]},options:chartOpts(grid)});
+  // Skip Rainfall/Temperature/Drought — handled by mp_climate_loader
 
-  // Temperature
-  const tc=document.getElementById('chartTemp');
-  if(tc) new Chart(tc,{type:'line',data:{
-    labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-    datasets:[
-      {label:'Max \u00b0C',data:[26,30,36,41,44,40,32,30,32,34,30,27],borderColor:'#f0a878',backgroundColor:'rgba(240,168,120,0.1)',fill:true,tension:0.4,borderWidth:2,pointRadius:2},
-      {label:'Min \u00b0C',data:[10,13,18,24,28,27,25,24,23,20,15,11],borderColor:'#5cc3cd',backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:2}
-    ]},options:chartOpts(grid)});
-
-  // Drought
-  const dc=document.getElementById('chartDrought');
-  if(dc) new Chart(dc,{type:'bar',data:{
-    labels:['Jhabua','Barwani','Tikamgarh','Indore','Sagar','Damoh','Dhar','Khargone','Betul','Mandla'],
-    datasets:[{label:'Drought Probability %',data:[86,82,80,78,74,72,71,68,52,32],
-      backgroundColor:['#ec8b9b','#ec8b9b','#ec8b9b','#ec8b9b','#f0a878','#f0a878','#f0a878','#f0a878','#e6cf6b','#6fc795']}]
-  },options:chartOpts(grid)});
-
-  // NDVI
-  const nc=document.getElementById('chartNdvi');
-  if(nc) new Chart(nc,{type:'line',data:{
-    labels:['Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan'],
-    datasets:[
-      {label:'NDVI 2024',data:[0.30,0.45,0.58,0.62,0.55,0.48,0.42,0.40],borderColor:'#6fc795',backgroundColor:'rgba(111,199,149,0.1)',fill:true,tension:0.4,borderWidth:2,pointRadius:2},
-      {label:'NDVI Normal',data:[0.35,0.52,0.65,0.70,0.62,0.55,0.50,0.46],borderColor:'#5cc3cd',borderDash:[4,4],backgroundColor:'transparent',tension:0.4,borderWidth:2,pointRadius:0}
-    ]},options:chartOpts(grid)});
+  // NDVI — handled by dicra_ndvi_loader.js; don't init here
 
   // AI mini
-  const ac=document.getElementById('chartAI');
-  if(ac) new Chart(ac,{type:'line',data:{
-    labels:Array.from({length:14},(_,i)=>'D'+(i+1)),
-    datasets:[{label:'Forecast Confidence',data:[88,90,91,93,92,94,95,94,96,95,96,97,96,96],borderColor:'#9cc0ef',backgroundColor:'rgba(127,169,232,0.12)',fill:true,tension:0.4,borderWidth:2,pointRadius:0}]
-  },options:chartOpts(grid)});
-
+  try{
+    const ac=document.getElementById('chartAI');
+    if(ac) new Chart(ac,{type:'line',data:{
+      labels:Array.from({length:14},(_,i)=>'D'+(i+1)),
+      datasets:[{label:'Forecast Confidence',data:[88,90,91,93,92,94,95,94,96,95,96,97,96,96],borderColor:'#9cc0ef',backgroundColor:'rgba(127,169,232,0.12)',fill:true,tension:0.4,borderWidth:2,pointRadius:0}]
+    },options:chartOpts(grid)});
+  }catch(e){}
   // PMFBY
-  const pc=document.getElementById('chartPMFBY');
-  if(pc) new Chart(pc,{type:'doughnut',data:{
-    labels:['Low Risk','Moderate','High','Extreme'],
-    datasets:[{data:[28,34,26,12],backgroundColor:['#6fc795','#e6cf6b','#f0a878','#ec8b9b'],borderColor:'#3a5246',borderWidth:2}]
-  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:9}}}}}});
+  try{
+    const pc=document.getElementById('chartPMFBY');
+    if(pc) new Chart(pc,{type:'doughnut',data:{
+      labels:['Low Risk','Moderate','High','Extreme'],
+      datasets:[{data:[28,34,26,12],backgroundColor:['#6fc795','#e6cf6b','#f0a878','#ec8b9b'],borderColor:'#3a5246',borderWidth:2}]
+    },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:9}}}}}});
+  }catch(e){}
 }
 
 function chartOpts(grid){
@@ -1517,17 +2011,50 @@ function hideTyping(){
 function buildChatSystemPrompt(){
   const distKey=document.getElementById('districtSelect')?.value;
   let locLine="No specific district selected yet.";
+  let climLine="";
+  let vilLine="";
   if(distKey && MP_DISTRICTS[distKey]){
     const d=MP_DISTRICTS[distKey];
     locLine=`Currently selected district: ${d.name}. Risk=${d.risk}, drought index=${d.drought}%, max temp=${d.heat}C, NDVI=${d.ndvi}.`;
+    // Try to get actual climate data
+    var cd = window._mpClimateData;
+    if (cd && cd.districts && cd.districts[distKey]) {
+      var di = cd.districts[distKey].indices || {};
+      var ann = cd.districts[distKey].annual || {};
+      var lastYr = ann.years && ann.years.length ? ann.years[ann.years.length-1] : '';
+      var lastRain = ann.annual_rain_mm && ann.annual_rain_mm.length ? ann.annual_rain_mm[ann.annual_rain_mm.length-1] : '';
+      var lastHw = ann.heatwave_days && ann.heatwave_days.length ? ann.heatwave_days[ann.heatwave_days.length-1] : '';
+      climLine = `IMD data: drought_prob=${di.drought_probability_pct||'?'}%, heatwave_days/yr=${di.heatwave_days_mean||'?'}, mean_summer_tmax=${di.mean_summer_tmax||'?'}C, annual_rain=${di.annual_rain_mm_mean||'?'}mm, spi12=${di.spi12_year_end_mean||'?'}. Last year(${lastYr}): rain=${lastRain}mm, heatwave_days=${lastHw}.`;
+    }
+    // Get selected village
+    var vilName = window._mpClimateState && window._mpClimateState.currentVillage;
+    if (vilName) {
+      var villages = MP_DISTRICTS[distKey]._villages || {};
+      for (var vid in villages) {
+        if ((villages[vid].name||'').toUpperCase() === vilName.toUpperCase()) {
+          var vi = villages[vid].indices || {};
+          vilLine = `Selected village: ${vilName}. SPI-12=${vi.spi_12||'?'}, drought_prob=${vi.drought_probability_pct||'?'}%, annual_rain=${vi.annual_rain_mm||'?'}mm, max_summer_tmax=${vi.max_summer_tmax||'?'}C.`;
+          break;
+        }
+      }
+    }
   }
-  const langLine=chatLangHi
+  // Include forecast context if available
+  var fcLine = "";
+  if (window._forecast2040 && window._forecast2040.districts && distKey && window._forecast2040.districts[distKey]) {
+    var fc = window._forecast2040.districts[distKey];
+    fcLine = `2040 forecast: drought_prob=${fc.drought_probability_pct||'?'}%, max_summer_tmax=${fc.max_summer_tmax||'?'}C, heatwave_days/yr=${fc.heatwave_days_per_yr||'?'}, annual_rain=${fc.annual_rain_mm_mean||'?'}mm.`;
+  }
+  var langLine=chatLangHi
     ? "IMPORTANT: Reply ONLY in Hindi (Devanagari script)."
     : "Reply in English unless the user writes in Hindi, in which case reply in Hindi.";
   return `You are the Krishi AI Assistant inside the Madhya Pradesh Climate Intelligence Platform, a dashboard for village-level climate risk and agriculture in MP, India.
 Help farmers, panchayat officials, and analysts with: weather, rainfall, drought, heatwaves, soil moisture, NDVI/crop health, irrigation timing, crop selection, and PMFBY crop insurance.
 Give practical, concise, actionable advice (2-5 short sentences or a tight bullet list). Use realistic agronomy for central India (soybean, cotton, wheat, paddy, gram, maize).
 ${locLine}
+${climLine}
+${vilLine}
+${fcLine}
 Active alerts on the platform: heatwave in Indore/Dhar/Barwani (~44C), drought watch in Bundelkhand (Sagar/Damoh/Tikamgarh), NDVI deficit in Jhabua, good rainfall forecast for Mandla/Balaghat.
 If asked for exact live numbers you don't have, say it's an estimate and suggest checking the relevant dashboard panel. ${langLine}`;
 }
@@ -1729,11 +2256,11 @@ window.MP_DISTRICT_GEOJSON = {"type":"FeatureCollection","name":"mp_districts","
 // ============================================================
 window.MP_BOUNDARY = { layers:{}, active:null, cfg:{
   district:{ globals:['MP_DISTRICT_GEOJSON'], file:'mp_districts.geojson',
-             nameKeys:['district','DISTRICT','NAME','dtname','NAME_2'], color:'#5cc3cd', label:'District' },
+             nameKeys:['District','district','DISTRICT','NAME','dtname','NAME_2'], color:'#5cc3cd', label:'District' },
   tehsil:{   globals:['MP_TEHSIL_GEOJSON'],   file:'mp_tehsils.geojson',
-             nameKeys:['tehsil','TEHSIL','tahsil','sdtname','SUB_DIST','NAME_3','Tehsil_Nam','NAME'], color:'#6fc8bd', label:'Tehsil' },
+             nameKeys:['Sub_dist','sub_dist','tehsil','TEHSIL','tahsil','sdtname','SUB_DIST','NAME_3','Tehsil_Nam','NAME'], color:'#6fc8bd', label:'Tehsil' },
   block:{    globals:['MP_BLOCK_GEOJSON'],    file:'mp_blocks.geojson',
-             nameKeys:['block','BLOCK','BLOCK_NAME','cd_block','Block_Name','NAME'], color:'#6fc795', label:'Block' }
+             nameKeys:['Sub_dist','sub_dist','block','BLOCK','BLOCK_NAME','cd_block','Block_Name','NAME'], color:'#6fc795', label:'Block' }
 }};
 const MP_RISK_COLORS={extreme:'#ec8b9b',high:'#f0a878',moderate:'#e6cf6b',low:'#6fc795'};
 
@@ -1819,4 +2346,6 @@ function mpAddBoundaryControl(map){
 }
 </script>
 <script src="mp_climate_loader.js"></script>
+<script src="dicra_ndvi_loader.js"></script>
+<script src="cadastral_loader.js"></script>
 </body></html>
