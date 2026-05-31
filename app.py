@@ -1,9 +1,9 @@
 """
 Streamlit app for MP Climate Intelligence Dashboard.
 
-Data strategy: Keep HTML sent over WebSocket small.  Patch all data-file
-URLs to point to GitHub raw CDN — the browser fetches large data at
-runtime, just like it fetches Chart.js / Leaflet from CDN.
+Strategy:  Use st.components.v1.html() (safe sandboxed iframe) with a
+large initial height.  All data files are fetched from GitHub raw CDN;
+nothing is inlined, so the WebSocket message stays small.
 """
 import streamlit as st
 import os
@@ -43,19 +43,8 @@ def get_html_content():
     return html
 
 
-def _esc_srcdoc(s):
-    """Escape a string for use in an HTML srcdoc attribute.
-
-    Within an srcdoc attribute, the browser decodes HTML entities and then
-    parses the result as a new document.  We must protect both `&` (so URL
-    query strings and bare ampersands in JS aren't misinterpreted) and `"`
-    (so the attribute delimiter isn't broken).  The order matters: & first,
-    " second, so that the &quot; we introduce stays intact.
-    """
-    return s.replace('&', '&amp;').replace('"', '&quot;')
-
-
 def main():
+    # Hide Streamlit chrome
     st.markdown("""
         <style>
         .stApp, .stApp > div, .block-container {
@@ -68,19 +57,16 @@ def main():
             width: 100vw !important; height: 100vh !important;
             overflow: hidden !important;
         }
-        iframe.dash-frame {
-            position: fixed; top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            border: none; z-index: 999999;
+        iframe[title="streamlit-component-iframe"] {
+            width: 100vw !important;
+            height: 100vh !important;
+            border: none !important;
         }
         </style>
     """, unsafe_allow_html=True)
 
     html = get_html_content()
-    st.markdown(
-        f'<iframe class="dash-frame" srcdoc="{_esc_srcdoc(html)}"></iframe>',
-        unsafe_allow_html=True,
-    )
+    st.components.v1.html(html, height=800, scrolling=False)
 
 
 if __name__ == '__main__':
