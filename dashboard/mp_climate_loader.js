@@ -200,12 +200,12 @@
       var icon = isHeat ? 'fa-sun' : isRain ? 'fa-cloud-rain' : 'fa-cloud';
       var iconColor = isHeat ? 'var(--red)' : isRain ? 'var(--cyan)' : 'var(--text-dim)';
       html += '<div class="forecast-day" style="background:'+(isHeat?'rgba(236,139,155,0.08)':'rgba(92,195,205,0.03)')+';border:1px solid var(--border);border-radius:6px;padding:0.4rem;text-align:center;">'
-        + '<div style="font-size:0.55rem;color:var(--text-dim);margin-bottom:0.2rem;">'+dayName+'</div>'
-        + '<div style="font-size:0.5rem;color:var(--text-dim);margin-bottom:0.3rem;">'+dateStr+'</div>'
-        + '<div style="font-size:0.85rem;margin-bottom:0.3rem;"><i class="fa '+icon+'" style="color:'+iconColor+'"></i></div>'
-        + '<div style="font-size:0.7rem;font-weight:700;color:'+(isHeat?'var(--red)':'var(--text)')+';">'+tmaxVal.toFixed(1)+'°C</div>'
-        + '<div style="font-size:0.55rem;color:var(--blue);">'+(rainVal > 0 ? rainVal.toFixed(1)+'mm' : '—')+'</div>'
-        + '<div style="font-size:0.5rem;margin-top:0.2rem;color:'+(isHeat?'var(--red)':isRain?'var(--cyan)':'var(--green)')+';">'
+        + '<div style="font-size:0.6rem;font-weight:600;color:var(--text-dim);margin-bottom:0.2rem;">'+dayName+'</div>'
+        + '<div style="font-size:0.6rem;font-weight:600;color:var(--text-dim);margin-bottom:0.3rem;">'+dateStr+'</div>'
+        + '<div style="font-size:0.9rem;margin-bottom:0.3rem;"><i class="fa '+icon+'" style="color:'+iconColor+'"></i></div>'
+        + '<div style="font-size:0.75rem;font-weight:700;color:'+(isHeat?'var(--red)':'var(--text)')+';">'+tmaxVal.toFixed(1)+'°C</div>'
+        + '<div style="font-size:0.65rem;font-weight:600;color:var(--blue);">'+(rainVal > 0 ? rainVal.toFixed(1)+'mm' : '—')+'</div>'
+        + '<div style="font-size:0.6rem;font-weight:600;margin-top:0.2rem;color:'+(isHeat?'var(--red)':isRain?'var(--cyan)':'var(--green)')+';">'
         + (isHeat ? 'HEAT' : isRain ? 'RAIN' : 'FAIR')+'</div>'
         + '</div>';
     }
@@ -218,7 +218,7 @@
     var f = d.future_2040;
     var host = document.getElementById('future-2040-panel'); if (!host) return;
     if (!f) {
-      host.innerHTML = '<div style="padding:0.6rem;font-size:0.65rem;color:var(--text-dim)">'
+      host.innerHTML = '<div style="padding:0.6rem;font-size:0.7rem;font-weight:600;color:var(--text-dim)">'
         + 'CMIP6 future projection unavailable. Run scripts/05_gee_cmip6_2040.js.</div>';
       return;
     }
@@ -232,10 +232,10 @@
       + '<div class="section-header"><i class="fa fa-clock-rotate-left" style="color:var(--orange);font-size:0.7rem"></i>'
       + '<div class="section-title">2040 PROJECTION (SSP2-4.5, 8-MODEL CMIP6 ENSEMBLE)</div></div>'
       + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;padding:0.75rem;">'
-      + '  <div class="metric-card"><div class="metric-label">HEATWAVE DAYS/YR</div><div class="metric-value cyan">'+fmt(f.heatwave_days_per_yr,1)+'</div><div style="font-size:0.55rem">vs baseline: '+delta(f.delta_heatwave_days_per_yr,' d')+'</div></div>'
-      + '  <div class="metric-card"><div class="metric-label">PEAK TMAX</div><div class="metric-value" style="color:var(--red)">'+fmt(f.max_summer_tmax,1)+'°C</div><div style="font-size:0.55rem">vs baseline: '+delta(f.delta_max_summer_tmax,'°C')+'</div></div>'
-      + '  <div class="metric-card"><div class="metric-label">R95p mm/yr</div><div class="metric-value" style="color:var(--blue)">'+fmt(f.r95p_mm_per_yr,1)+'</div><div style="font-size:0.55rem">vs baseline: '+delta(f.delta_r95p_mm_per_yr,' mm',true)+'</div></div>'
-      + '  <div class="metric-card"><div class="metric-label">Rx1day mm</div><div class="metric-value" style="color:var(--blue)">'+fmt(f.rx1day_mm,1)+'</div><div style="font-size:0.55rem">vs baseline: '+delta(f.delta_rx1day_mm,' mm',true)+'</div></div>'
+      + '  <div class="metric-card"><div class="metric-label">HEATWAVE DAYS/YR</div><div class="metric-value cyan">'+fmt(f.heatwave_days_per_yr,1)+'</div><div style="font-size:0.65rem;font-weight:600">vs baseline: '+delta(f.delta_heatwave_days_per_yr,' d')+'</div></div>'
+      + '  <div class="metric-card"><div class="metric-label">PEAK TMAX</div><div class="metric-value" style="color:var(--red)">'+fmt(f.max_summer_tmax,1)+'°C</div><div style="font-size:0.65rem;font-weight:600">vs baseline: '+delta(f.delta_max_summer_tmax,'°C')+'</div></div>'
+      + '  <div class="metric-card"><div class="metric-label">R95p mm/yr</div><div class="metric-value" style="color:var(--blue)">'+fmt(f.r95p_mm_per_yr,1)+'</div><div style="font-size:0.65rem;font-weight:600">vs baseline: '+delta(f.delta_r95p_mm_per_yr,' mm',true)+'</div></div>'
+      + '  <div class="metric-card"><div class="metric-label">Rx1day mm</div><div class="metric-value" style="color:var(--blue)">'+fmt(f.rx1day_mm,1)+'</div><div style="font-size:0.65rem;font-weight:600">vs baseline: '+delta(f.delta_rx1day_mm,' mm',true)+'</div></div>'
       + '</div>';
   }
 
@@ -252,7 +252,7 @@
       }
     }
     if (!match) {
-      host.innerHTML = '<div style="padding:0.6rem;font-size:0.65rem;color:var(--text-dim)">'
+      host.innerHTML = '<div style="padding:0.6rem;font-size:0.7rem;font-weight:600;color:var(--text-dim)">'
         + 'No data for village "'+villageName+'" — village may not be in shapefile.</div>';
       return;
     }
@@ -270,7 +270,7 @@
       + '  <div class="metric-card"><div class="metric-label">R95p</div><div class="metric-value" style="color:var(--blue)">'+fmt(i.r95p_mm,1)+' mm</div></div>'
       + '  <div class="metric-card"><div class="metric-label">Rx1day</div><div class="metric-value" style="color:var(--blue)">'+fmt(i.rx1day_mm,1)+' mm</div></div>'
       + '</div>'
-      + '<div style="font-size:0.55rem;color:var(--text-dim);padding:0 0.75rem 0.5rem">'
+      + '<div style="font-size:0.65rem;font-weight:600;color:var(--text-dim);padding:0 0.75rem 0.5rem">'
       + '  Centroid: '+fmt(match.lat,4)+', '+fmt(match.lon,4)+' — sampled from nearest IMD 0.05° pixel</div>';
   }
 
@@ -455,7 +455,7 @@
     var cropHealthEl = el('agri-crop-health');
     if (cropHealthEl) {
       var chColor = cropScore > 70 ? 'var(--green)' : cropScore > 45 ? 'var(--yellow)' : 'var(--red)';
-      cropHealthEl.innerHTML = cropScore+'%<span style="font-size:0.5rem;margin-left:0.3rem;color:'+chColor+'">'+(cropScore>70?'GOOD':cropScore>45?'FAIR':'POOR')+'</span>';
+      cropHealthEl.innerHTML = cropScore+'%<span style="font-size:0.65rem;font-weight:600;margin-left:0.3rem;color:'+chColor+'">'+(cropScore>70?'GOOD':cropScore>45?'FAIR':'POOR')+'</span>';
       cropHealthEl.style.color = chColor;
     }
 
