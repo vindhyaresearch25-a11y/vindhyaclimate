@@ -864,36 +864,52 @@ canvas.chart-canvas{max-height:100%;}
           </div>
         </div>
         <!-- Cadastral -->
-        <div class="btm-pane" id="pane-cadastral">
-          <div class="section-header"><i class="fa fa-draw-polygon" style="color:var(--orange);font-size:0.7rem"></i><div class="section-title">CADASTRAL MAP — KUNDAM VILLAGE <span style="color:var(--teal)">|</span> KHASRA <span id="cad-selected-khasra" style="color:var(--orange)">—</span></div></div>
-          <div style="overflow-y:auto;flex:1;padding:0.5rem;">
-            <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
-              <div style="flex:1;">
-                <label style="font-size:0.65rem;font-weight:600;color:var(--text-dim);display:block;margin-bottom:0.2rem;">SELECT KHASRA NUMBER</label>
-                <select id="cadKhasraSelect" onchange="onKhasraChange(this.value)" style="width:100%;padding:0.3rem;border-radius:4px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:0.65rem;">
-                  <option value="">-- Select Khasra --</option>
-                </select>
+            <div class="btm-pane" id="pane-cadastral">
+              <div class="section-header"><i class="fa fa-draw-polygon" style="color:var(--orange);font-size:0.7rem"></i><div class="section-title">CADASTRAL — KUNDAM <span style="color:var(--teal)">|</span> KHASRA <span id="cad-selected-khasra" style="color:var(--orange)">—</span></div></div>
+              <div style="overflow-y:auto;flex:1;padding:0.5rem;">
+                <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
+                  <div style="flex:1;">
+                    <label style="font-size:0.65rem;font-weight:600;color:var(--text-dim);display:block;margin-bottom:0.2rem;">SELECT KHASRA NUMBER</label>
+                    <select id="cadKhasraSelect" onchange="onKhasraChange(this.value)" style="width:100%;padding:0.3rem;border-radius:4px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:0.65rem;">
+                      <option value="">-- Select Khasra --</option>
+                    </select>
+                  </div>
+                  <div style="flex:1;text-align:right;">
+                    <button onclick="flyToKhasra()" style="background:var(--cyan);border:none;padding:0.3rem 0.6rem;border-radius:4px;color:#000;cursor:pointer;font-size:0.6rem;font-weight:600;"><i class="fa fa-location-crosshairs"></i> FLY TO</button>
+                    <button onclick="toggleCadLayer()" style="background:var(--teal);border:none;padding:0.3rem 0.6rem;border-radius:4px;color:#000;cursor:pointer;font-size:0.6rem;font-weight:600;margin-left:0.3rem;"><i class="fa fa-layer-group"></i> TOGGLE</button>
+                    <button onclick="showAllParcels()" style="background:var(--orange);border:none;padding:0.3rem 0.6rem;border-radius:4px;color:#000;cursor:pointer;font-size:0.6rem;font-weight:600;margin-left:0.3rem;"><i class="fa fa-eye"></i> ALL</button>
+                  </div>
+                </div>
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+                  <div class="metric-card" style="flex:1;min-width:75px;"><div class="metric-label">AREA</div><div class="metric-value" id="cad-area" style="font-size:0.65rem;color:var(--cyan)">—</div></div>
+                  <div class="metric-card" style="flex:1;min-width:75px;"><div class="metric-label">LAND USE</div><div class="metric-value" id="cad-landuse" style="font-size:0.65rem;color:var(--green)">—</div></div>
+                  <div class="metric-card" style="flex:1;min-width:75px;"><div class="metric-label">SOIL</div><div class="metric-value" id="cad-soil" style="font-size:0.65rem;color:var(--yellow)">—</div></div>
+                  <div class="metric-card" style="flex:1;min-width:75px;"><div class="metric-label">CROP</div><div class="metric-value" id="cad-crop" style="font-size:0.65rem;color:var(--green)">—</div></div>
+                  <div class="metric-card" style="flex:1;min-width:75px;"><div class="metric-label">IRRIGATION</div><div class="metric-value" id="cad-irrigation" style="font-size:0.65rem;color:var(--cyan)">—</div></div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.4rem;margin-bottom:0.5rem;">
+                  <div class="metric-card"><div class="metric-label">NDVI</div><div class="metric-value" id="cad-ndvi" style="font-size:0.8rem;font-weight:700">—</div></div>
+                  <div class="metric-card"><div class="metric-label">CROP HEALTH</div><div class="metric-value" id="cad-crop-health" style="font-size:0.8rem;font-weight:700">—</div></div>
+                  <div class="metric-card"><div class="metric-label">SOIL MOISTURE</div><div class="metric-value" id="cad-soil-moisture" style="font-size:0.8rem;font-weight:700">—</div></div>
+                  <div class="metric-card"><div class="metric-label">RAINFALL</div><div class="metric-value" id="cad-rainfall" style="font-size:0.8rem;font-weight:700;color:var(--blue)">—</div></div>
+                  <div class="metric-card"><div class="metric-label">DROUGHT RISK</div><div class="metric-value" id="cad-drought" style="font-size:0.8rem;font-weight:700">—</div></div>
+                  <div class="metric-card"><div class="metric-label">HEAT RISK</div><div class="metric-value" id="cad-heat-risk" style="font-size:0.8rem;font-weight:700">—</div></div>
+                  <div class="metric-card"><div class="metric-label">GW STRESS</div><div class="metric-value" id="cad-gw-stress" style="font-size:0.8rem;font-weight:700">—</div></div>
+                  <div class="metric-card"><div class="metric-label">GW RECHARGE</div><div class="metric-value" id="cad-gw-recharge" style="font-size:0.8rem;font-weight:700">—</div></div>
+                  <div class="metric-card" style="grid-column:span 2"><div class="metric-label">YIELD FORECAST</div><div class="metric-value" id="cad-yield" style="font-size:0.8rem;font-weight:700;color:var(--cyan)">—</div></div>
+                  <div class="metric-card" style="grid-column:span 2"><div class="metric-label">YIELD CATEGORY</div><div class="metric-value" id="cad-yield-cat" style="font-size:0.8rem;font-weight:700">—</div></div>
+                </div>
+                <div id="cad-overlay-data" style="font-size:0.7rem;font-weight:600;line-height:1.5;color:var(--text);padding:0.3rem;margin-bottom:0.4rem;background:rgba(92,195,205,0.06);border-radius:4px;border-left:3px solid var(--cyan);">
+                  Select a khasra to load boundary and analytics.
+                </div>
+                <div style="background:rgba(111,199,149,0.06);border:1px solid rgba(111,199,149,0.3);border-radius:6px;padding:0.5rem;margin-bottom:0.3rem;">
+                  <div style="font-size:0.6rem;letter-spacing:2px;font-weight:700;color:var(--green);margin-bottom:0.3rem;"><i class="fa fa-robot"></i> AI CROP ADVISORY — KHASRA <span id="cad-advisory-khasra" style="color:var(--orange)">—</span></div>
+                  <div id="cad-advisory" style="font-size:0.72rem;font-weight:600;line-height:1.7;color:var(--text);">
+                    Select a khasra to generate parcel-specific AI advisory based on GEE satellite analytics and IMD climate data.
+                  </div>
+                </div>
               </div>
-              <div style="flex:1;text-align:right;">
-                <button onclick="flyToKhasra()" style="background:var(--cyan);border:none;padding:0.3rem 0.6rem;border-radius:4px;color:#000;cursor:pointer;font-size:0.6rem;font-weight:600;"><i class="fa fa-location-crosshairs"></i> FLY TO</button>
-                <button onclick="toggleCadLayer()" style="background:var(--teal);border:none;padding:0.3rem 0.6rem;border-radius:4px;color:#000;cursor:pointer;font-size:0.6rem;font-weight:600;margin-left:0.3rem;"><i class="fa fa-layer-group"></i> TOGGLE</button>
-              </div>
             </div>
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
-              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">AREA (Ha)</div><div class="metric-value" id="cad-area" style="font-size:0.6rem;color:var(--cyan)">—</div></div>
-              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">LAND USE</div><div class="metric-value" id="cad-landuse" style="font-size:0.7rem;font-weight:700;color:var(--green)">—</div></div>
-              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">SOIL TYPE</div><div class="metric-value" id="cad-soil" style="font-size:0.65rem;font-weight:700;color:var(--yellow)">—</div></div>
-              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">OWNER</div><div class="metric-value" id="cad-owner" style="font-size:0.65rem;font-weight:700;color:var(--teal)">—</div></div>
-              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">AREA</div><div class="metric-value" id="cad-area" style="font-size:0.7rem;font-weight:700;color:var(--text)">—</div></div>
-              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">CROP</div><div class="metric-value" id="cad-crop" style="font-size:0.7rem;font-weight:700;color:var(--green)">—</div></div>
-              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">IRRIGATION</div><div class="metric-value" id="cad-irrigation" style="font-size:0.65rem;font-weight:700;color:var(--cyan)">—</div></div>
-              <div class="metric-card" style="flex:1;min-width:80px;"><div class="metric-label">DROUGHT</div><div class="metric-value" id="cad-drought" style="font-size:0.7rem;font-weight:700;color:var(--red)">—</div></div>
-            </div>
-            <div id="cad-overlay-data" style="font-size:0.75rem;font-weight:600;line-height:1.6;color:var(--text);padding:0.3rem;background:rgba(92,195,205,0.06);border-radius:4px;border-left:3px solid var(--cyan);">
-              Select a khasra number to load parcel-level metrics and overlay data.
-            </div>
-          </div>
-        </div>
       </div><!-- btm-content -->
     </div><!-- bottom-panel -->
   </div><!-- main -->
