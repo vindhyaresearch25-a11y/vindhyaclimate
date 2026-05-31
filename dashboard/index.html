@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 <style>
 :root{
 --bg-deep:#0a1f14;
@@ -865,13 +866,13 @@ canvas.chart-canvas{max-height:100%;}
         </div>
         <!-- Cadastral -->
             <div class="btm-pane" id="pane-cadastral">
-              <div class="section-header"><i class="fa fa-draw-polygon" style="color:var(--orange);font-size:0.7rem"></i><div class="section-title">CADASTRAL — KUNDAM <span style="color:var(--teal)">|</span> KHASRA <span id="cad-selected-khasra" style="color:var(--orange)">—</span></div></div>
+              <div class="section-header"><i class="fa fa-draw-polygon" style="color:var(--orange);font-size:0.7rem"></i><div class="section-title">सीमांक CADASTRAL — <span id="cad-village-name">SAHIJANA</span> <span style="color:var(--teal)">|</span> KHASRA <span id="cad-selected-khasra" style="color:var(--orange)">—</span></div></div>
               <div style="overflow-y:auto;flex:1;padding:0.5rem;">
                 <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
                   <div style="flex:1;">
-                    <label style="font-size:0.65rem;font-weight:600;color:var(--text-dim);display:block;margin-bottom:0.2rem;">SELECT KHASRA NUMBER</label>
+                    <label style="font-size:0.65rem;font-weight:600;color:var(--text-dim);display:block;margin-bottom:0.2rem;">SEARCH KHASRA / PARCEL</label>
                     <select id="cadKhasraSelect" onchange="onKhasraChange(this.value)" style="width:100%;padding:0.3rem;border-radius:4px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:0.65rem;">
-                      <option value="">-- Select Khasra --</option>
+                      <option value="">-- Choose from 1,000 Parcels --</option>
                     </select>
                   </div>
                   <div style="flex:1;text-align:right;">
@@ -880,32 +881,47 @@ canvas.chart-canvas{max-height:100%;}
                     <button onclick="showAllParcels()" style="background:var(--orange);border:none;padding:0.3rem 0.6rem;border-radius:4px;color:#000;cursor:pointer;font-size:0.6rem;font-weight:600;margin-left:0.3rem;"><i class="fa fa-eye"></i> ALL</button>
                   </div>
                 </div>
-                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
-                  <div class="metric-card" style="flex:1;min-width:75px;"><div class="metric-label">AREA</div><div class="metric-value" id="cad-area" style="font-size:0.65rem;color:var(--cyan)">—</div></div>
-                  <div class="metric-card" style="flex:1;min-width:75px;"><div class="metric-label">LAND USE</div><div class="metric-value" id="cad-landuse" style="font-size:0.65rem;color:var(--green)">—</div></div>
-                  <div class="metric-card" style="flex:1;min-width:75px;"><div class="metric-label">SOIL</div><div class="metric-value" id="cad-soil" style="font-size:0.65rem;color:var(--yellow)">—</div></div>
-                  <div class="metric-card" style="flex:1;min-width:75px;"><div class="metric-label">CROP</div><div class="metric-value" id="cad-crop" style="font-size:0.65rem;color:var(--green)">—</div></div>
-                  <div class="metric-card" style="flex:1;min-width:75px;"><div class="metric-label">IRRIGATION</div><div class="metric-value" id="cad-irrigation" style="font-size:0.65rem;color:var(--cyan)">—</div></div>
+                <!-- Land Record (B-1) -->
+                <div style="background:rgba(33,150,243,0.08);border:1px solid rgba(33,150,243,0.3);border-radius:6px;padding:0.4rem;margin-bottom:0.4rem;">
+                  <div style="font-size:0.55rem;letter-spacing:2px;font-weight:700;color:var(--blue);margin-bottom:0.3rem;"><i class="fa fa-folder"></i> LAND RECORD (B-1)</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;">
+                    <div><span style="font-size:0.5rem;color:var(--text-dim);display:block;">KHASRA NO</span><span id="cad-khasra" style="font-size:0.7rem;color:#fff;font-weight:700;">—</span></div>
+                    <div><span style="font-size:0.5rem;color:var(--text-dim);display:block;">AREA (Ha)</span><span id="cad-area" style="font-size:0.7rem;color:var(--cyan);font-weight:700;">—</span></div>
+                  </div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.4rem;margin-bottom:0.5rem;">
-                  <div class="metric-card"><div class="metric-label">NDVI</div><div class="metric-value" id="cad-ndvi" style="font-size:0.8rem;font-weight:700">—</div></div>
-                  <div class="metric-card"><div class="metric-label">CROP HEALTH</div><div class="metric-value" id="cad-crop-health" style="font-size:0.8rem;font-weight:700">—</div></div>
-                  <div class="metric-card"><div class="metric-label">SOIL MOISTURE</div><div class="metric-value" id="cad-soil-moisture" style="font-size:0.8rem;font-weight:700">—</div></div>
-                  <div class="metric-card"><div class="metric-label">RAINFALL</div><div class="metric-value" id="cad-rainfall" style="font-size:0.8rem;font-weight:700;color:var(--blue)">—</div></div>
-                  <div class="metric-card"><div class="metric-label">DROUGHT RISK</div><div class="metric-value" id="cad-drought" style="font-size:0.8rem;font-weight:700">—</div></div>
-                  <div class="metric-card"><div class="metric-label">HEAT RISK</div><div class="metric-value" id="cad-heat-risk" style="font-size:0.8rem;font-weight:700">—</div></div>
-                  <div class="metric-card"><div class="metric-label">GW STRESS</div><div class="metric-value" id="cad-gw-stress" style="font-size:0.8rem;font-weight:700">—</div></div>
-                  <div class="metric-card"><div class="metric-label">GW RECHARGE</div><div class="metric-value" id="cad-gw-recharge" style="font-size:0.8rem;font-weight:700">—</div></div>
-                  <div class="metric-card" style="grid-column:span 2"><div class="metric-label">YIELD FORECAST</div><div class="metric-value" id="cad-yield" style="font-size:0.8rem;font-weight:700;color:var(--cyan)">—</div></div>
-                  <div class="metric-card" style="grid-column:span 2"><div class="metric-label">YIELD CATEGORY</div><div class="metric-value" id="cad-yield-cat" style="font-size:0.8rem;font-weight:700">—</div></div>
+                <!-- Farmer Identity -->
+                <div style="background:rgba(33,150,243,0.08);border:1px solid rgba(33,150,243,0.3);border-radius:6px;padding:0.4rem;margin-bottom:0.4rem;">
+                  <div style="font-size:0.55rem;letter-spacing:2px;font-weight:700;color:var(--blue);margin-bottom:0.3rem;"><i class="fa fa-user"></i> FARMER IDENTITY</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;">
+                    <div><span style="font-size:0.5rem;color:var(--text-dim);display:block;">OWNER NAME</span><span id="cad-owner" style="font-size:0.7rem;color:#fff;font-weight:700;">—</span></div>
+                    <div><span style="font-size:0.5rem;color:var(--text-dim);display:block;">FATHER/HUSBAND</span><span id="cad-father" style="font-size:0.7rem;color:#fff;font-weight:700;">—</span></div>
+                  </div>
                 </div>
-                <div id="cad-overlay-data" style="font-size:0.7rem;font-weight:600;line-height:1.5;color:var(--text);padding:0.3rem;margin-bottom:0.4rem;background:rgba(92,195,205,0.06);border-radius:4px;border-left:3px solid var(--cyan);">
-                  Select a khasra to load boundary and analytics.
+                <!-- Parcel Details -->
+                <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.4rem;">
+                  <div class="metric-card" style="flex:1;min-width:65px;"><div class="metric-label">LAND USE</div><div class="metric-value" id="cad-landuse" style="font-size:0.6rem;color:var(--green)">—</div></div>
+                  <div class="metric-card" style="flex:1;min-width:65px;"><div class="metric-label">SOIL</div><div class="metric-value" id="cad-soil" style="font-size:0.6rem;color:var(--yellow)">—</div></div>
+                  <div class="metric-card" style="flex:1;min-width:65px;"><div class="metric-label">CROP</div><div class="metric-value" id="cad-crop" style="font-size:0.6rem;color:var(--green)">—</div></div>
+                  <div class="metric-card" style="flex:1;min-width:65px;"><div class="metric-label">IRRIGATION</div><div class="metric-value" id="cad-irrigation" style="font-size:0.6rem;color:var(--cyan)">—</div></div>
                 </div>
-                <div style="background:rgba(111,199,149,0.06);border:1px solid rgba(111,199,149,0.3);border-radius:6px;padding:0.5rem;margin-bottom:0.3rem;">
-                  <div style="font-size:0.6rem;letter-spacing:2px;font-weight:700;color:var(--green);margin-bottom:0.3rem;"><i class="fa fa-robot"></i> AI CROP ADVISORY — KHASRA <span id="cad-advisory-khasra" style="color:var(--orange)">—</span></div>
-                  <div id="cad-advisory" style="font-size:0.72rem;font-weight:600;line-height:1.7;color:var(--text);">
-                    Select a khasra to generate parcel-specific AI advisory based on GEE satellite analytics and IMD climate data.
+                <!-- Satellite Analytics -->
+                <div style="background:rgba(33,150,243,0.06);border:1px solid rgba(33,150,243,0.2);border-radius:6px;padding:0.4rem;margin-bottom:0.4rem;">
+                  <div style="font-size:0.55rem;letter-spacing:2px;font-weight:700;color:var(--blue);margin-bottom:0.3rem;"><i class="fa fa-satellite"></i> SATELLITE ANALYTICS</div>
+                  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.3rem;">
+                    <div class="metric-card"><div class="metric-label">NDVI</div><div class="metric-value" id="cad-ndvi" style="font-size:0.7rem;font-weight:700">—</div></div>
+                    <div class="metric-card"><div class="metric-label">CROP HEALTH</div><div class="metric-value" id="cad-crop-health" style="font-size:0.7rem;font-weight:700">—</div></div>
+                    <div class="metric-card"><div class="metric-label">SOIL MOISTURE</div><div class="metric-value" id="cad-soil-moisture" style="font-size:0.7rem;font-weight:700">—</div></div>
+                    <div class="metric-card"><div class="metric-label">CLIMATE RISK</div><div class="metric-value" id="cad-risk" style="font-size:0.7rem;font-weight:700">—</div></div>
+                  </div>
+                </div>
+                <div id="cad-overlay-data" style="font-size:0.65rem;font-weight:600;line-height:1.4;color:var(--text);padding:0.3rem;margin-bottom:0.4rem;background:rgba(33,150,243,0.06);border-radius:4px;border-left:3px solid var(--blue);">
+                  <b>KHASRA <span id="cad-okhasra">—</span></b> &mdash; सीमांक Medh Boundary &bull; Select a khasra to load parcel analytics.
+                </div>
+                <!-- AI Advisory -->
+                <div style="background:rgba(255,204,0,0.06);border:1px solid rgba(255,204,0,0.3);border-radius:6px;padding:0.4rem;">
+                  <div style="font-size:0.55rem;letter-spacing:2px;font-weight:700;color:var(--yellow);margin-bottom:0.3rem;"><i class="fa fa-robot"></i> AI ADVISORY — KHASRA <span id="cad-advisory-khasra" style="color:var(--orange)">—</span></div>
+                  <div id="cad-advisory" style="font-size:0.65rem;font-weight:600;line-height:1.5;color:var(--text);">
+                    Select a khasra to generate parcel-specific AI advisory.
                   </div>
                 </div>
               </div>
@@ -1040,7 +1056,7 @@ const MP_DISTRICTS = {
   shivpuri:     {name:"Shivpuri",     lat:25.423, lng:77.659, risk:"high",     drought:70, heat:41, ndvi:0.43,
                  blocks:{Shivpuri:["Khaniadhana","Pichhore"], Karera:["Narwar","Badarwas"], Kolaras:["Pohri","Khaniadhana"]}},
   sidhi:        {name:"Sidhi",        lat:24.418, lng:81.881, risk:"moderate", drought:54, heat:38, ndvi:0.52,
-                 blocks:{Sidhi:["Rampur Naikin","Kusmi"], Churhat:["Majhauli","Sihawal"], Gopadbanas:["Bahri","Dhauhani"]}},
+                 blocks:{Sidhi:["Rampur Naikin","Kusmi","Sahijana"], Churhat:["Majhauli","Sihawal"], Gopadbanas:["Bahri","Dhauhani"]}},
   singrauli:    {name:"Singrauli",    lat:24.199, lng:82.675, risk:"moderate", drought:48, heat:38, ndvi:0.55,
                  blocks:{Singrauli:["Waidhan","Deosar"], Chitrangi:["Mada","Sarai"], Deosar:["Bargawan","Gorbi"]}},
   tikamgarh:    {name:"Tikamgarh",    lat:24.742, lng:78.832, risk:"extreme",  drought:80, heat:43, ndvi:0.36,

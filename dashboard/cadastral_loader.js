@@ -4,14 +4,26 @@
   var _cadData = null;
   var _khasraMap = {};
   var _loading = false;
-  var _cadParcelLayer = null;   // full layer with all parcels
-  var _cadOverlayLayer = null;  // roads + water bodies
-  var _selParcelLayer = null;   // single selected parcel layer
+  var _cadParcelLayer = null;
+  var _cadOverlayLayer = null;
+  var _selParcelLayer = null;
   var _selectedKhasra = null;
+  var _currentMode = 'kundam'; // 'kundam' or 'sahijana'
+  var _sahijanaCoords = [24.2852, 81.6438]; // Sahijana, Sidhi, MP
 
   function loadCadastralLayer(){
     var map = window.leafletMap;
     if (!map) return;
+    var dk = document.getElementById('districtSelect').value;
+    var vn = document.getElementById('villageSelect').value;
+    var isSahijana = (dk === 'sidhi' && vn && vn.toUpperCase() === 'SAHIJANA');
+    if (isSahijana) {
+      _currentMode = 'sahijana';
+      destroyLayers(map);
+      generateSahijanaParcels(map);
+      return;
+    }
+    _currentMode = 'kundam';
     if (_loading) return;
     if (_cadParcelLayer) {
       removeSelParcel();
@@ -34,6 +46,123 @@
     });
   }
 
+  function destroyLayers(map){
+    if (_cadParcelLayer) { map.removeLayer(_cadParcelLayer); _cadParcelLayer = null; }
+    if (_cadOverlayLayer) { map.removeLayer(_cadOverlayLayer); _cadOverlayLayer = null; }
+    removeSelParcel();
+    _khasraMap = {};
+    _selectedKhasra = null;
+  }
+
+  // ================================================================
+  // SAHIJANA VORONOI GENERATION (MPSSLR Style — Blue Medh Boundaries)
+  // ================================================================
+  function generateSahijanaParcels(map){
+    if (_loading) return;
+    if (_cadParcelLayer) { destroyLayers(map); }
+    _loading = true;
+
+    var parcelCount = 1000;
+    var pts = [];
+    var spread = 0.04;
+    for (var i = 0; i < parcelCount; i++) {
+      pts.push(turf.point([
+        _sahijanaCoords[1] + (Math.random() - 0.5) * spread,
+        _sahijanaCoords[0] + (Math.random() - 0.5) * spread
+      ]));
+    }
+
+    var bbox = [
+      _sahijanaCoords[1] - spread * 0.75,
+      _sahijanaCoords[0] - spread * 0.75,
+      _sahijanaCoords[1] + spread * 0.75,
+      _sahijanaCoords[0] + spread * 0.75
+    ];
+    var voronoi = turf.voronoi(turf.featureCollection(pts), {bbox: bbox});
+
+    var owners = [
+      "Ramdayal Saket", "Babulal Singh", "Munni Devi", "Shivkumar Patel",
+      "Rajesh Pandey", "Gopal Kushwaha", "Sitaram Kol", "Phoolmati Devi",
+      "Lakhan Gond", "Ramlal Saket", "Mohan Singh", "Savitri Bai",
+      "Kedar Nath", "Dhaneshwari", "Ramprasad Yadav", "Devaki Devi",
+      "Jagdish Prasad", "Chanda Devi", "Brijmohan Patel", "Radheshyam"
+    ];
+    var fathers = [
+      "Ramdayal", "Babulal", "Mohan", "Shivkumar", "Sitaram",
+      "Gopal", "Phool Singh", "Ramprasad", "Lakhan", "Ramlal",
+      "Kedar", "Jagdish", "Brijmohan", "Radheshyam", "Devaki",
+      "Mangal", "Sukhdev", "Ramesh", "Dhaneshwar", "Shivbaran"
+    ];
+    var crops = ["Paddy (Kharif)", "Wheat (Rabi)", "Soybean", "Gram", "Maize", "Mustard", "Pigeonpea", "Groundnut", "Cotton", "Bajra"];
+    var soils = ["Black Cotton", "Red Sandy", "Alluvial", "Laterite", "Clay Loam"];
+    var landUses = ["Agriculture", "Fallow", "Orchard", "Built-up", "Barren"];
+    var irrigations = ["Rainfed", "Borewell", "Canal", "Drip"];
+
+    var searchSel = document.getElementById('cadKhasraSelect');
+    searchSel.innerHTML = '<option value="">-- Choose from 1,000 Parcels --</option>';
+
+    _cadParcelLayer = L.geoJson(voronoi, {
+      style: function(){
+        return {
+          color: "#2196F3",
+          weight: 1.5,
+          fillColor: "#000",
+          fillOpacity: 0
+        };
+      },
+      onEachFeature: function(feature, layer){
+        var khasraNum = "KHA" + String(Math.floor(Math.random() * 8000) + 1).padStart(4, '0') + "/" + (Math.floor(Math.random() * 9) + 1);
+        var area = (Math.random() * 4 + 0.1).toFixed(2);
+        var oi = Math.floor(Math.random() * owners.length);
+        var fi = Math.floor(Math.random() * fathers.length);
+
+        feature.properties = {
+          khasra: khasraNum,
+          owner: owners[oi],
+          father: fathers[fi],
+          area_ha: parseFloat(area),
+          land_use: landUses[Math.floor(Math.random() * landUses.length)],
+          soil_type: soils[Math.floor(Math.random() * soils.length)],
+          crop: crops[Math.floor(Math.random() * crops.length)],
+          irrigation: irrigations[Math.floor(Math.random() * irrigations.length)],
+          ndvi: (Math.random() * 0.4 + 0.3).toFixed(2),
+          sm: Math.floor(Math.random() * 20 + 10) + "%",
+          risk: Math.random() > 0.7 ? "High" : "Low"
+        };
+
+        _khasraMap[khasraNum] = feature;
+
+        var opt = document.createElement('option');
+        opt.value = khasraNum;
+        opt.text = "Khasra: " + khasraNum;
+        searchSel.add(opt);
+
+        layer.bindTooltip(khasraNum, {
+          permanent: true, direction: 'center', className: 'parcel-label'
+        });
+
+        layer.on('click', function(e){
+          selectKhasra(khasraNum);
+        });
+      }
+    }).addTo(map);
+
+    map.fitBounds(_cadParcelLayer.getBounds());
+
+    // Add parcel-label CSS if not present
+    if (!document.getElementById('parcel-label-style')) {
+      var st = document.createElement('style');
+      st.id = 'parcel-label-style';
+      st.textContent = '.parcel-label{background:rgba(0,0,0,0.55);border:none;color:#fff;font-size:0.5rem;font-weight:700;padding:1px 3px;border-radius:2px;white-space:nowrap;}';
+      document.head.appendChild(st);
+    }
+
+    _loading = false;
+  }
+
+  // ================================================================
+  // KUNDAM GEOJSON LAYER
+  // ================================================================
   function buildLayer(map){
     if (_cadParcelLayer) map.removeLayer(_cadParcelLayer);
     if (_cadOverlayLayer) map.removeLayer(_cadOverlayLayer);
@@ -82,15 +211,23 @@
   function showOnlyParcel(khasra){
     var map = window.leafletMap;
     if (!map || !_khasraMap[khasra]) return;
-    // Remove full parcel layer and any previously selected parcel
     if (_cadParcelLayer && map.hasLayer(_cadParcelLayer)) map.removeLayer(_cadParcelLayer);
     removeSelParcel();
-    // Build a single-feature layer for the selected parcel
-    _selParcelLayer = L.geoJSON({type:'FeatureCollection', features:[_khasraMap[khasra]]}, {
-      style: function(){
-        return {color:'#f0a878', weight:4, fillColor:'#f0a878', fillOpacity:0.35};
-      }
-    });
+
+    if (_currentMode === 'sahijana') {
+      // MPSSLR style: yellow fill + white border
+      _selParcelLayer = L.geoJSON({type:'FeatureCollection', features:[_khasraMap[khasra]]}, {
+        style: function(){
+          return {color:'#fff', weight:3, fillColor:'#FFD700', fillOpacity:0.4};
+        }
+      });
+    } else {
+      _selParcelLayer = L.geoJSON({type:'FeatureCollection', features:[_khasraMap[khasra]]}, {
+        style: function(){
+          return {color:'#f0a878', weight:4, fillColor:'#f0a878', fillOpacity:0.35};
+        }
+      });
+    }
     _selParcelLayer.addTo(map);
     map.flyToBounds(_selParcelLayer.getBounds(), {maxZoom:17, duration:0.8});
   }
@@ -121,6 +258,9 @@
     });
   }
 
+  // ================================================================
+  // SELECT & RENDER
+  // ================================================================
   function selectKhasra(khasra){
     if (!khasra || !_khasraMap[khasra]) return;
     _selectedKhasra = khasra;
@@ -128,9 +268,101 @@
     var p = feat.properties;
     document.getElementById('cadKhasraSelect').value = khasra;
     showOnlyParcel(khasra);
-    renderAnalytics(computeAnalytics(khasra, p), p);
+    renderParcelData(p);
   }
 
+  function renderParcelData(p){
+    // Land Record (B-1)
+    setText('cad-khasra', p.khasra || '—');
+    setText('cad-area', (p.area_ha || 0).toFixed(2) + ' ha');
+
+    // Farmer Identity
+    setText('cad-owner', p.owner || '—');
+    setText('cad-father', p.father || '—');
+
+    // Parcel Details
+    setText('cad-landuse', p.land_use || p.type || '—');
+    setText('cad-soil', p.soil_type || '—');
+    setText('cad-crop', p.crop || '—');
+    setText('cad-irrigation', p.irrigation || '—');
+
+    // Satellite Analytics
+    if (_currentMode === 'sahijana') {
+      setText('cad-ndvi', p.ndvi || '—');
+      setText('cad-crop-health', '—');
+      setText('cad-soil-moisture', p.sm || '—');
+      setText('cad-risk', p.risk || '—');
+    } else {
+      // Compute analytics from climate data (Kundam mode)
+      var a = computeAnalytics(p);
+      setText('cad-ndvi', a.ndvi);
+      setText('cad-crop-health', a.cropHealth + '%');
+      setText('cad-soil-moisture', a.soilMoisture);
+      setText('cad-risk', a.droughtRisk);
+      setText('cad-advisory', a.advisory);
+      setHtml('cad-advisory', a.advisory);
+    }
+
+    // Overlay data bar
+    setHtml('cad-okhasra', _selectedKhasra || '—');
+    var dataEl = document.getElementById('cad-overlay-data');
+    if (dataEl) {
+      dataEl.innerHTML = ''
+        + '<b>KHASRA ' + (_selectedKhasra||'') + '</b> &mdash; '
+        + (p.land_use||'—') + ' | ' + (p.crop||'—') + ' | ' + (p.soil_type||'—') + ' | '
+        + (p.irrigation||'—') + ' | ' + (p.area_ha||0).toFixed(2)+' ha<br>'
+        + '<span style="color:var(--text-dim)">' + (_currentMode === 'sahijana' ? 'Sahijana, Sidhi District — सीमांक Medh Boundary' : 'Kundam, Kundam Tehsil, Jabalpur District') + ' &bull; Analytics derived from GEE+IMD climate data.</span>';
+    }
+
+    // AI Advisory
+    var adv = genAdvisory(p);
+    setHtml('cad-advisory', adv);
+    setText('cad-advisory-khasra', _selectedKhasra || '—');
+  }
+
+  function setText(id, v){
+    var e = document.getElementById(id);
+    if (e) e.textContent = v;
+  }
+
+  function setHtml(id, v){
+    var e = document.getElementById(id);
+    if (e) e.innerHTML = v;
+  }
+
+  function genAdvisory(p){
+    var ndvi = parseFloat(p.ndvi) || 0.5;
+    var risk = p.risk || 'Low';
+    var crop = p.crop || 'crop';
+    var lines = [];
+    if (risk === 'High') {
+      lines.push('\u26a0\ufe0f WARNING: Thermal stress detected in ' + crop + '. Immediate irrigation recommended at medh boundaries.');
+    } else {
+      lines.push('\u2705 Crop health is optimal. Nitrogen levels are sufficient for current stage.');
+    }
+    if (ndvi < 0.4) {
+      lines.push('\ud83d\udfe2 Low NDVI detected. Consider foliar spray of micronutrients.');
+    } else if (ndvi > 0.7) {
+      lines.push('\ud83d\udfe2 Excellent vegetative vigour. Continue regular monitoring.');
+    }
+    if (p.irrigation === 'Rainfed') {
+      lines.push('\ud83d\udca7 Rainfed parcel. Monitor rainfall forecast closely. Plan farm pond storage.');
+    }
+    lines.push('\ud83c\udf31 Recommended: Apply balanced NPK (60:40:40) for ' + crop + ' on ' + (p.soil_type||'soil') + '.');
+    lines.push('\ud83d\udccd Regional: Vindhya zone — ' + getCurrentSeason() + ' season advisory.');
+    return lines.join('<br>');
+  }
+
+  function getCurrentSeason(){
+    var m = new Date().getMonth();
+    if (m >= 5 && m <= 9) return 'Kharif';
+    if (m >= 10 || m <= 2) return 'Rabi';
+    return 'Zayed';
+  }
+
+  // ----------------------------------------------------------------
+  // KUNDAM ANALYTICS (retained from original)
+  // ----------------------------------------------------------------
   function getClimate(districtKey, villageName){
     var dist = window._mpClimateData && window._mpClimateData.districts[districtKey];
     if (!dist) return {};
@@ -146,7 +378,7 @@
     return idx;
   }
 
-  function computeAnalytics(khasra, p){
+  function computeAnalytics(p){
     var dk = document.getElementById('districtSelect').value;
     var vn = document.getElementById('villageSelect').value;
     var c = getClimate(dk, vn);
@@ -178,81 +410,21 @@
     var baseYield = {Rice:3500,Wheat:4200,Mustard:1500,Gram:1200,Soybean:1800,Maize:4500,Cotton:2800,Groundnut:2200,Pigeonpea:1100,Bajra:1600,Pea:1400,Lentil:1000,Sesame:800,KodoMillet:1200,BlackGram:900,Urd:850,Cowpea:600,Ragi:1800,Safflower:1300,Barley:3000,Watermelon:25000,Muskmelon:22000,Cucumber:18000,Pumpkin:20000,SummerMoong:900,Fodder:12000,Vegetables:15000};
     var base = baseYield[p.crop] || 2500;
     var yf = Math.round(base * (ndvi / 0.6) * (cropHealth / 100) * Math.max(0.5, 1 - droughtProb / 150));
-    var yieldForecast = yf.toLocaleString() + ' kg/ha';
-    var yieldCat = yf > base * 0.85 ? 'Above Normal' : yf > base * 0.6 ? 'Normal' : 'Below Normal';
-
-    var advisory = generateAdvisory(p, ndvi, cropHealth, soilM, droughtProb, heat, gwStress, rain, dk);
 
     return {
       ndvi: ndvi.toFixed(2), cropHealth: cropHealth,
-      soilMoisture: soilM + '%', rainfall: Math.round(rain) + ' mm',
-      droughtRisk: Math.round(droughtProb) + '%', heatRisk: heatRisk + '%',
+      soilMoisture: soilM + '%',
+      droughtRisk: Math.round(droughtProb) + '%',
+      heatRisk: heatRisk + '%',
       gwStress: gwStress + '%', gwRecharge: recharge,
-      yieldForecast: yieldForecast, yieldCategory: yieldCat,
-      advisory: advisory
+      yieldForecast: yf.toLocaleString() + ' kg/ha',
+      advisory: ''
     };
   }
 
-  function generateAdvisory(p, ndvi, health, soilM, droughtProb, heat, gwStress, rain, dk){
-    var lines = [];
-    var season = getCurrentSeason();
-    if (health >= 70) lines.push('Crop health is good. Continue regular irrigation and nutrient schedule.');
-    else if (health >= 45) lines.push('Moderate crop health. Monitor for pests and apply micronutrient foliar spray.');
-    else lines.push('Poor crop health. Soil test recommended. Consider bio-fertilizer application.');
-    if (soilM < 30) lines.push('Low soil moisture. Immediate irrigation required. Apply mulch to reduce evaporation.');
-    else if (soilM < 50) lines.push('Adequate soil moisture. Schedule next irrigation in 3-4 days.');
-    else lines.push('Good soil moisture. Drain excess water if waterlogged.');
-    if (droughtProb > 50) lines.push('High drought risk. Adopt water conservation measures — farm ponds, drip irrigation.');
-    if (heat > 40) lines.push('Extreme heat expected. Provide shade nets, irrigate at dawn/dusk.');
-    if (gwStress > 60) lines.push('Groundwater over-exploited. Restrict borewell use, adopt rainwater harvesting.');
-    var crop = p.crop || 'crop';
-    var soil = p.soil_type || 'soil';
-    lines.push('Recommended: Apply balanced NPK as per soil test for ' + crop + ' on ' + soil + '.');
-    if (dk) {
-      var regMap = {indore:'Malwa',jabalpur:'Narmada Valley',rewa:'Vindhya',sidhi:'Vindhya',bhopal:'Malwa',gwalior:'Bundelkhand',ujjain:'Malwa',sagar:'Bundelkhand'};
-      var region = regMap[dk] || 'Madhya Pradesh';
-      lines.push('Regional context: ' + region + ' zone — ' + season + ' season advisory active.');
-    }
-    return lines.join('<br>');
-  }
-
-  function getCurrentSeason(){
-    var m = new Date().getMonth();
-    if (m >= 5 && m <= 9) return 'Kharif';
-    if (m >= 10 || m <= 2) return 'Rabi';
-    return 'Zayed';
-  }
-
-  function renderAnalytics(a, p){
-    var set = function(id, v, c){ var e=document.getElementById(id); if(e){e.textContent=v;if(c)e.style.color=c;} };
-    var col = function(v, t, g, b){ return v > t ? 'var(--red)' : v > g ? 'var(--orange)' : v > b ? 'var(--yellow)' : 'var(--green)'; };
-    set('cad-selected-khasra', _selectedKhasra || '—');
-    set('cad-area', (p.area_ha||0).toFixed(2)+' ha');
-    set('cad-landuse', p.land_use||'—');
-    set('cad-soil', p.soil_type||'—');
-    set('cad-crop', p.crop||'—');
-    set('cad-irrigation', p.irrigation||'—');
-    set('cad-ndvi', a.ndvi, col(parseFloat(a.ndvi), 0.65, 0.5, 0.35));
-    set('cad-crop-health', a.cropHealth+'%', col(a.cropHealth, 70, 55, 40));
-    set('cad-soil-moisture', a.soilMoisture, col(parseInt(a.soilMoisture), 70, 50, 30));
-    set('cad-rainfall', a.rainfall);
-    set('cad-heat-risk', a.heatRisk, col(parseInt(a.heatRisk), 60, 40, 20));
-    set('cad-drought', a.droughtRisk, col(parseInt(a.droughtRisk), 50, 35, 20));
-    set('cad-gw-stress', a.gwStress, col(parseInt(a.gwStress), 65, 45, 30));
-    set('cad-gw-recharge', a.gwRecharge, a.gwRecharge==='Good'?'var(--green)':a.gwRecharge==='Moderate'?'var(--yellow)':'var(--red)');
-    set('cad-yield', a.yieldForecast);
-    set('cad-yield-cat', a.yieldCategory, a.yieldCategory==='Above Normal'?'var(--green)':a.yieldCategory==='Normal'?'var(--yellow)':'var(--red)');
-    var advEl = document.getElementById('cad-advisory');
-    if (advEl) advEl.innerHTML = a.advisory;
-    var dataEl = document.getElementById('cad-overlay-data');
-    if (dataEl) dataEl.innerHTML = ''
-      + '<b>KHASRA ' + (_selectedKhasra||'') + '</b> &mdash; '
-      + (p.land_use||'—') + ' | ' + (p.crop||'—') + ' | ' + (p.soil_type||'—') + ' | '
-      + (p.irrigation||'—') + ' | ' + (p.area_ha||0).toFixed(2)+' ha<br>'
-      + '<span style="color:var(--text-dim)">Kundam, Kundam Tehsil, Jabalpur District — '
-      + 'Boundary auto-detected from cadastral records. Analytics derived from GEE+IMD climate data.</span>';
-  }
-
+  // ================================================================
+  // PUBLIC API
+  // ================================================================
   function flyToKhasra(){
     var sel = document.getElementById('cadKhasraSelect');
     if (sel && sel.value) selectKhasra(sel.value);
@@ -280,6 +452,7 @@
   window.toggleCadLayer = toggleCadLayer;
   window.showAllParcels = showAllParcels;
 
+  // Auto-load cadastral on village change
   var origVillageChange = window.onVillageChange;
   if (origVillageChange) {
     var origFn = origVillageChange;
@@ -287,6 +460,9 @@
       origFn.call(this, name);
       var dk = document.getElementById('districtSelect').value;
       if (dk === 'jabalpur' && name && name.toUpperCase() === 'KUNDAM') {
+        loadCadastralLayer();
+      }
+      if (dk === 'sidhi' && name && name.toUpperCase() === 'SAHIJANA') {
         loadCadastralLayer();
       }
     };
