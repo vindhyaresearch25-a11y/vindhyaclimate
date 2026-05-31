@@ -67,6 +67,24 @@ def get_html_content():
         '#hero{position:relative;min-height:100vh'
     )
 
+    # Inject Gemini API key from Streamlit Secrets (fallback to hardcoded)
+    gemini_key = st.secrets.get("GEMINI_API_KEY", "gen-lang-client-0298941748")
+    html = html.replace(
+        "const GEMINI_KEY = 'gen-lang-client-0298941748';",
+        f"const GEMINI_KEY = '{gemini_key}';"
+    )
+
+    # Handle logo for Streamlit (convert to base64 if file exists locally)
+    logo_path = os.path.join(DASHBOARD_DIR, 'logo.jpeg')
+    if os.path.exists(logo_path):
+        import base64
+        with open(logo_path, 'rb') as f:
+            b64 = base64.b64encode(f.read()).decode()
+        html = html.replace(
+            'logo.jpeg',
+            f'data:image/jpeg;base64,{b64}'
+        )
+
     return html
 
 
