@@ -1,25 +1,31 @@
 """
 Streamlit app for MP Climate Intelligence Dashboard.
 
-Strategy:  Use st.components.v1.html() (safe sandboxed iframe) with a
-large initial height.  All data files are fetched from GitHub raw CDN;
-nothing is inlined, so the WebSocket message stays small.
+Strategy:  Use st.components.v1.html() with an iframe.  JS files are inlined
+into the HTML so that data URL patches are applied to the fetch calls.
+All data files are fetched from GitHub raw CDN at runtime.
 """
 import streamlit as st
 import os
 
-st.set_page_config(page_title="MP Climate Intelligence", layout="wide", page_icon="🌾")
+st.set_page_config(page_title="MP Climate Intelligence", layout="wide", page_icon="\U0001f33e")
 
 DASHBOARD_DIR = os.path.join(os.path.dirname(__file__), 'dashboard')
 GITHUB_RAW = "https://raw.githubusercontent.com/vindhyaresearch25-a11y/vindhyaclimate/main/dashboard/data"
+GITHUB_BASE = "https://raw.githubusercontent.com/vindhyaresearch25-a11y/vindhyaclimate/main/dashboard"
 
 _URL_PATCHES = [
     ("'data/mp_climate_data.json'",        f"'{GITHUB_RAW}/mp_climate_data.json'"),
     ("'data/dicra_ndvi.json'",             f"'{GITHUB_RAW}/dicra_ndvi.json'"),
     ("'data/forecast_2040.json'",          f"'{GITHUB_RAW}/forecast_2040.json'"),
     ("'data/cadastral_kundam.geojson'",    f"'{GITHUB_RAW}/cadastral_kundam.geojson'"),
-    ("'data/villages_",                    f"'{GITHUB_RAW}/villages_"),
+    # Boundary GeoJSON files (in dashboard/ root, not dashboard/data/)
+    ("'mp_districts.geojson'",             f"'{GITHUB_BASE}/mp_districts.geojson'"),
+    ("'mp_tehsils.geojson'",               f"'{GITHUB_BASE}/mp_tehsils.geojson'"),
+    ("'mp_blocks.geojson'",                f"'{GITHUB_BASE}/mp_blocks.geojson'"),
 ]
+
+_JS_FILES = ['mp_climate_loader.js', 'dicra_ndvi_loader.js', 'cadastral_loader.js']
 
 
 @st.cache_resource
@@ -27,9 +33,29 @@ def get_html_content():
     with open(os.path.join(DASHBOARD_DIR, 'index.html'), 'r', encoding='utf-8') as f:
         html = f.read()
 
+    # Inline external JS files so that fetch URLs inside them get patched
+    for js_file in _JS_FILES:
+        js_path = os.path.join(DASHBOARD_DIR, js_file)
+        with open(js_path, 'r', encoding='utf-8') as f:
+            js_content = f.read()
+
+        old_tag = f'<script src="{js_file}"></script>'
+        new_tag = f'<script>{js_content}</script>'
+        html = html.replace(old_tag, new_tag)
+
+    # Apply URL patches (now hits fetch URLs inside inlined JS)
     for old, new in _URL_PATCHES:
         if old in html:
             html = html.replace(old, new)
+        else:
+            # Dynamic village URL: 'data/villages_'+distKey+'.geojson'
+            pass  # handled by replace below
+
+    # Also patch the dynamic village URL pattern
+    html = html.replace(
+        "'data/villages_'",
+        f"'{GITHUB_RAW}/villages_'"
+    )
 
     # Fix viewport for iframe rendering
     html = html.replace(
@@ -38,13 +64,14 @@ def get_html_content():
     )
     html = html.replace(
         '#hero{position:relative;min-height:100%',
-        '#hero{position:relative;min-height:600px'
+        '#hero{position:relative;min-height:100vh'
     )
+
     return html
 
 
 def main():
-    # Hide Streamlit chrome
+    # Hide Streamlit chrome and force iframe to fill viewport
     st.markdown("""
         <style>
         .stApp, .stApp > div, .block-container {
@@ -57,16 +84,21 @@ def main():
             width: 100vw !important; height: 100vh !important;
             overflow: hidden !important;
         }
-        iframe[title="streamlit-component-iframe"] {
+        iframe {
             width: 100vw !important;
             height: 100vh !important;
             border: none !important;
         }
+        .stHtml {
+            width: 100% !important;
+            height: 100vh !important;
+        }
+        section[data-testid="stBottom"] { display: none !important; }
         </style>
     """, unsafe_allow_html=True)
 
     html = get_html_content()
-    st.components.v1.html(html, height=800, scrolling=False)
+    st.components.v1.html(html, height=10000, scrolling=False)
 
 
 if __name__ == '__main__':

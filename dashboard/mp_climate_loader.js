@@ -608,7 +608,24 @@
     window._mpClimateHooked = true;
   }
 
+  function setLoadingStatus(msg, isError){
+    var el = document.getElementById('data-status');
+    if (!el) {
+      var bp = document.getElementById('bottom-panel');
+      if (!bp) return;
+      el = document.createElement('div');
+      el.id = 'data-status';
+      el.style.cssText = 'padding:0.3rem 0.75rem;font-size:0.65rem;font-weight:600;flex-shrink:0;display:flex;align-items:center;gap:0.5rem;border-bottom:1px solid var(--border);background:rgba(10,31,20,0.98);';
+      bp.insertBefore(el, bp.firstChild);
+    }
+    el.innerHTML = (isError
+      ? '<span style="color:var(--red)">\u2716</span><span style="color:var(--red)">'+msg+'</span>'
+      : '<span class="live-dot"></span><span style="color:var(--text-dim)">'+msg+'</span>');
+    el.style.display = 'flex';
+  }
+
   function init(){
+    setLoadingStatus('Loading climate data...');
     fetch(DATA_URL).then(function(r){
       if (!r.ok) throw new Error('HTTP '+r.status+' loading '+DATA_URL);
       return r.json();
@@ -624,17 +641,16 @@
           // pick a default district
           var first = Object.keys(payload.districts)[0];
           refreshAll(first, null);
+          setLoadingStatus('Data loaded: ' + Object.keys(payload.districts).length + ' districts, ' + first, false);
+          setTimeout(function(){
+            var el = document.getElementById('data-status');
+            if (el) el.style.display = 'none';
+          }, 5000);
         }
       }, 250);
     }).catch(function(err){
       console.error('[mp_climate_loader] failed:', err);
-      var bp = document.getElementById('bottom-panel');
-      if (bp) {
-        var div = document.createElement('div');
-        div.style.cssText='padding:1rem;color:var(--red);font-size:0.75rem';
-        div.textContent = 'IMD data not loaded: '+err.message;
-        bp.insertBefore(div, bp.firstChild);
-      }
+      setLoadingStatus('Data load failed: '+err.message, true);
     });
   }
 

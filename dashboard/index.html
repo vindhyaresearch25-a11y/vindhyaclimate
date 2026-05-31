@@ -1296,6 +1296,30 @@ function onDistrictChange(distKey){
 
 var _villageGeoData = null;
 
+function generateSyntheticVillages(distKey){
+  var data = window._mpClimateData;
+  if (!data || !data.districts || !data.districts[distKey]) return null;
+  var dist = data.districts[distKey];
+  var features = [];
+  var villages = dist.villages || {};
+  var center = {lat: dist.lat || 23.5, lng: dist.lng || 78};
+  for (var id in villages) {
+    var v = villages[id];
+    var vlat = v.lat != null ? v.lat : center.lat + (Math.random() - 0.5) * 0.6;
+    var vlon = v.lon != null ? v.lon : center.lng + (Math.random() - 0.5) * 0.6;
+    features.push({
+      type: 'Feature',
+      properties: {
+        Vill_LGD: id,
+        Villl_name: v.name || 'Village ' + id
+      },
+      geometry: {type: 'Point', coordinates: [vlon, vlat]}
+    });
+  }
+  if (features.length === 0) return null;
+  return {type: 'FeatureCollection', features: features};
+}
+
 async function loadVillageBoundaries(distKey, hazardKind){
   const map=window.leafletMap; if(!map) return;
   if(window._villageLayer){ map.removeLayer(window._villageLayer); window._villageLayer=null; }
@@ -1303,10 +1327,18 @@ async function loadVillageBoundaries(distKey, hazardKind){
   const url='data/villages_'+distKey+'.geojson';
   try{
     const r=await fetch(url);
-    if(!r.ok) return;
-    _villageGeoData = await r.json();
-    applyVillageStyle(distKey, hazardKind);
+    if(r.ok){
+      _villageGeoData = await r.json();
+      applyVillageStyle(distKey, hazardKind);
+      return;
+    }
   }catch(e){}
+  // Fallback: generate synthetic villages from climate data
+  var syn = generateSyntheticVillages(distKey);
+  if (syn) {
+    _villageGeoData = syn;
+    applyVillageStyle(distKey, hazardKind);
+  }
 }
 
 function recolorVillageLayer(hazardKind){
@@ -1401,8 +1433,24 @@ function applyVillageStyle(distKey, hazardKind){
   if (window._villageLayer) { map.removeLayer(window._villageLayer); window._villageLayer = null; }
   var metric = getHazardMetricName(hazardKind);
   var isHazard = hazardKind && metric;
+  // Check if data has Point features (synthetic) or Polygon (real boundaries)
+  var isPointData = _villageGeoData.features && _villageGeoData.features[0] &&
+    _villageGeoData.features[0].geometry &&
+    _villageGeoData.features[0].geometry.type === 'Point';
   window._villageLayer = L.geoJSON(_villageGeoData, {
-    style: function(feature){
+    pointToLayer: isPointData ? function(feature, latlng){
+      var lgd = feature.properties.Vill_LGD || '';
+      var col = '#6fc795';
+      if (isHazard) {
+        var val = getVillageHazardVal(distKey, lgd, metric);
+        col = hazardColor(val, metric, '#6fc795');
+      }
+      return L.circleMarker(latlng, {
+        radius: 7, weight: 1, opacity: 0.85,
+        color: col, fillColor: col, fillOpacity: 0.65
+      });
+    } : undefined,
+    style: isPointData ? undefined : function(feature){
       var lgd = feature.properties.Vill_LGD || '';
       if (isHazard) {
         var val = getVillageHazardVal(distKey, lgd, metric);
