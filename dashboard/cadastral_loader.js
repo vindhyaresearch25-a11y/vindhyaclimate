@@ -2,11 +2,11 @@
   'use strict';
   var CAD_URL = 'data/cadastral_kundam.geojson';
   var _cadData = null;
-  var _cadLayer = null;
   var _khasraMap = {};
   var _loading = false;
-  var _cadParcelLayer = null;
-  var _cadOverlayLayer = null;
+  var _cadParcelLayer = null;   // full layer with all parcels
+  var _cadOverlayLayer = null;  // roads + water bodies
+  var _selParcelLayer = null;   // single selected parcel layer
   var _selectedKhasra = null;
 
   function loadCadastralLayer(){
@@ -14,8 +14,9 @@
     if (!map) return;
     if (_loading) return;
     if (_cadParcelLayer) {
-      map.addLayer(_cadParcelLayer); map.addLayer(_cadOverlayLayer);
-      if (_selectedKhasra) isolateKhasra(_selectedKhasra);
+      removeSelParcel();
+      map.addLayer(_cadParcelLayer);
+      if (_cadOverlayLayer) map.addLayer(_cadOverlayLayer);
       return;
     }
     _loading = true;
@@ -36,6 +37,7 @@
   function buildLayer(map){
     if (_cadParcelLayer) map.removeLayer(_cadParcelLayer);
     if (_cadOverlayLayer) map.removeLayer(_cadOverlayLayer);
+    removeSelParcel();
     _khasraMap = {};
     var parcels = {type:'FeatureCollection', features:[]};
     var overlays = {type:'FeatureCollection', features:[]};
@@ -57,7 +59,6 @@
       }
     });
     map.addLayer(_cadParcelLayer);
-    _cadLayer = _cadParcelLayer;
     if (overlays.features.length) {
       _cadOverlayLayer = L.geoJSON(overlays, {
         style: function(feature){
@@ -69,6 +70,36 @@
       });
       map.addLayer(_cadOverlayLayer);
     }
+  }
+
+  function removeSelParcel(){
+    if (_selParcelLayer && window.leafletMap) {
+      window.leafletMap.removeLayer(_selParcelLayer);
+      _selParcelLayer = null;
+    }
+  }
+
+  function showOnlyParcel(khasra){
+    var map = window.leafletMap;
+    if (!map || !_khasraMap[khasra]) return;
+    // Remove full parcel layer and any previously selected parcel
+    if (_cadParcelLayer && map.hasLayer(_cadParcelLayer)) map.removeLayer(_cadParcelLayer);
+    removeSelParcel();
+    // Build a single-feature layer for the selected parcel
+    _selParcelLayer = L.geoJSON({type:'FeatureCollection', features:[_khasraMap[khasra]]}, {
+      style: function(){
+        return {color:'#f0a878', weight:4, fillColor:'#f0a878', fillOpacity:0.35};
+      }
+    });
+    _selParcelLayer.addTo(map);
+    map.flyToBounds(_selParcelLayer.getBounds(), {maxZoom:17, duration:0.8});
+  }
+
+  function showAllParcels(){
+    var map = window.leafletMap; if (!map) return;
+    removeSelParcel();
+    _selectedKhasra = null;
+    if (_cadParcelLayer && !map.hasLayer(_cadParcelLayer)) map.addLayer(_cadParcelLayer);
   }
 
   function parcelColor(lu){
@@ -96,49 +127,8 @@
     var feat = _khasraMap[khasra];
     var p = feat.properties;
     document.getElementById('cadKhasraSelect').value = khasra;
-    var analytics = computeAnalytics(khasra, p);
-    displayParcel(khasra, feat, analytics);
-    renderAnalytics(analytics, p);
-  }
-
-  function isolateKhasra(khasra){
-    if (!_cadParcelLayer || !_khasraMap[khasra]) return;
-    _cadParcelLayer.eachLayer(function(l){
-      var f = l.feature;
-      if (f && f.properties && f.properties.khasra === khasra) {
-        l.setStyle({color:'#f0a878', weight:4, fillColor:parcelColor(f.properties.land_use), fillOpacity:0.5});
-      } else {
-        l.setStyle({color:'transparent', weight:0, fillColor:'transparent', fillOpacity:0, opacity:0});
-      }
-    });
-  }
-
-  function showAllParcels(){
-    _selectedKhasra = null;
-    if (_cadParcelLayer) {
-      _cadParcelLayer.resetStyle();
-      _cadParcelLayer.eachLayer(function(l){
-        var f = l.feature;
-        if (f && f.properties && f.properties.khasra && _khasraMap[f.properties.khasra]) {
-          l.bindTooltip('<b>'+f.properties.khasra+'</b>', {direction:'top', className:'cad-tooltip'});
-          l.off('click'); l.on('click', function(){ selectKhasra(f.properties.khasra); });
-        }
-      });
-    }
-  }
-
-  function displayParcel(khasra, feat, analytics){
-    var p = feat.properties;
-    isolateKhasra(khasra);
-    if (window.leafletMap) {
-      var layer = null;
-      _cadParcelLayer.eachLayer(function(l){
-        if (l.feature && l.feature.properties && l.feature.properties.khasra === khasra) {
-          layer = l;
-        }
-      });
-      if (layer) window.leafletMap.flyToBounds(layer.getBounds(), {maxZoom:17, duration:0.8});
-    }
+    showOnlyParcel(khasra);
+    renderAnalytics(computeAnalytics(khasra, p), p);
   }
 
   function getClimate(districtKey, villageName){
@@ -270,11 +260,15 @@
 
   function toggleCadLayer(){
     var map = window.leafletMap; if (!map) return;
-    if (_cadParcelLayer && map.hasLayer(_cadParcelLayer)) {
-      map.removeLayer(_cadParcelLayer);
+    var hasParcels = _cadParcelLayer && map.hasLayer(_cadParcelLayer);
+    var hasSel = _selParcelLayer && map.hasLayer(_selParcelLayer);
+    if (hasParcels || hasSel) {
+      if (_cadParcelLayer) map.removeLayer(_cadParcelLayer);
+      removeSelParcel();
       if (_cadOverlayLayer) map.removeLayer(_cadOverlayLayer);
     } else {
-      if (_cadParcelLayer) { map.addLayer(_cadParcelLayer); if (_selectedKhasra) isolateKhasra(_selectedKhasra); }
+      if (_selectedKhasra) { showOnlyParcel(_selectedKhasra); }
+      else if (_cadParcelLayer) map.addLayer(_cadParcelLayer);
       if (_cadOverlayLayer) map.addLayer(_cadOverlayLayer);
     }
   }
