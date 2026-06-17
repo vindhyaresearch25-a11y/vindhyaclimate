@@ -101,6 +101,7 @@ body{background:var(--bg-deep);color:var(--text);font-family:'IBM Plex Sans',san
 .nav-item.active .nav-label{color:#fff;}
 .nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;}
 #sidebar.collapsed .nav-label,#sidebar.collapsed .nav-section-title,#sidebar.collapsed .sidebar-logo-text,#sidebar.collapsed .nav-badge{display:none;}
+.admin-only{display:none;}
 
 /* Main area */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
@@ -411,6 +412,7 @@ canvas.chart-canvas{max-height:100%;}
       <div class="nav-item" onclick="setNav(this,&#39;sat&#39;)"><span class="nav-icon"><i class="fa fa-satellite"></i></span><span class="nav-label">Satellite Viewer</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;cadastral&#39;)"><span class="nav-icon"><i class="fa fa-draw-polygon"></i></span><span class="nav-label">Cadastral Map</span><span class="nav-badge">NEW</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;api&#39;)"><span class="nav-icon"><i class="fa fa-code"></i></span><span class="nav-label">API Access</span></div>
+      <div class="nav-item admin-only" onclick="setNav(this,&#39;admin&#39;)" style="display:none;"><span class="nav-icon"><i class="fa fa-shield"></i></span><span class="nav-label">Admin Panel</span></div>
     </div>
   </nav>
 
@@ -2399,6 +2401,9 @@ function mpAddBoundaryControl(map){
   ctrl.addTo(map); map._mpBndCtrl=ctrl;
 }
 </script>
+<script src="auth.js"></script>
+<script src="gis_controller.js"></script>
+<script src="shapefile_selector.js"></script>
 <script src="mp_climate_loader.js"></script>
 <script src="dicra_ndvi_loader.js"></script>
 <script src="cadastral_loader.js"></script>
