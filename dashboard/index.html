@@ -143,6 +143,11 @@ body{background:#f5f7fa;color:var(--text);font-family:-apple-system,BlinkMacSyst
 .loc-lock-icon{font-size:0.5rem;color:var(--green);margin-left:0.2rem;}
 .loc-breadcrumb{font-size:0.6rem;font-weight:500;color:var(--text-dim);margin-top:0.3rem;padding-top:0.4rem;border-top:1px solid var(--border);line-height:1.5;word-break:break-word;}
 .loc-breadcrumb b{color:var(--cyan);}
+.loc-divider{height:1px;background:var(--border);margin:0.4rem 0;}
+.bnd-row{display:flex;gap:3px;flex-wrap:wrap;}
+.bnd-btn{font-size:0.6rem;font-weight:600;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:#ffffff;color:var(--text-dim);cursor:pointer;flex:1;min-width:0;text-align:center;transition:all 0.15s;white-space:nowrap;}
+.bnd-btn:hover{border-color:var(--cyan-dim);color:var(--text);}
+.bnd-btn.active{background:rgba(26,138,158,0.1);border-color:var(--cyan);color:var(--cyan);}
 
 /* Timeline */
 .map-timeline{position:absolute;bottom:0.5rem;left:50%;transform:translateX(-50%);z-index:500;background:rgba(255,255,255,0.95);border:1px solid var(--border);border-radius:6px;padding:0.35rem 0.75rem;display:flex;align-items:center;gap:0.4rem;backdrop-filter:blur(8px);font-size:0.7rem;font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,0.06);}
@@ -316,11 +321,6 @@ canvas.chart-canvas{max-height:100%;}
 }
 </style>
 <style id="mp-boundary-css">
-.mp-bnd-ctrl{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:4px;display:flex;flex-direction:column;gap:3px;box-shadow:0 2px 8px rgba(0,0,0,0.06);}
-.mp-bnd-ctrl .mp-bnd-title{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:1.5px;color:var(--text-dim);text-align:center;padding:2px 0;}
-.mp-bnd-btn{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;font-size:0.62rem;font-weight:600;padding:4px 9px;border:1px solid var(--border);border-radius:5px;background:var(--bg-panel);color:var(--text-dim);cursor:pointer;white-space:nowrap;transition:all 0.15s;text-align:left;}
-.mp-bnd-btn:hover{border-color:var(--cyan-dim);color:var(--text);}
-.mp-bnd-btn.active{background:rgba(26,138,158,0.14);border-color:var(--cyan);color:var(--cyan);}
 .mp-bnd-toast{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);max-width:340px;background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:8px;padding:0.6rem 0.85rem;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;font-size:0.66rem;line-height:1.55;color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,0.07);z-index:1200;}
 .mp-bnd-toast code{font-family:'IBM Plex Mono',monospace;background:rgba(26,138,158,0.1);padding:1px 5px;border-radius:4px;color:var(--teal);font-size:0.62rem;}
 .mp-bnd-toast .x{float:right;cursor:pointer;color:var(--text-dim);margin-left:6px;}
@@ -491,6 +491,14 @@ canvas.chart-canvas{max-height:100%;}
 
           <div class="loc-breadcrumb" id="locBreadcrumb">
             <b>India</b> › <b>Madhya Pradesh</b>
+          </div>
+
+          <div class="loc-divider"></div>
+          <div class="loc-bar-title" style="margin-top:0.3rem"><i class="fa fa-layer-group"></i> Boundaries</div>
+          <div class="bnd-row">
+            <button class="bnd-btn" data-kind="district" onclick="mpSetBoundary('district',true)">District</button>
+            <button class="bnd-btn" data-kind="tehsil" onclick="mpSetBoundary('tehsil',true)">Tehsil</button>
+            <button class="bnd-btn" data-kind="block" onclick="mpSetBoundary('block',true)">Block</button>
           </div>
         </div>
       </div>
@@ -2329,7 +2337,7 @@ function mpStyle(kind){
   };
 }
 function mpUpdBtnUI(){
-  document.querySelectorAll('.mp-bnd-btn').forEach(b=>{
+  document.querySelectorAll('.bnd-btn').forEach(b=>{
     b.classList.toggle('active', b.dataset.kind===window.MP_BOUNDARY.active);
   });
 }
@@ -2373,18 +2381,7 @@ async function mpSetBoundary(kind, fit){
   if(fit){ try{ map.fitBounds(B.layers[kind].getBounds(),{padding:[20,20]}); }catch(e){} }
 }
 function mpAddBoundaryControl(map){
-  if(map._mpBndCtrl) return;
-  const ctrl=L.control({position:'topleft'});
-  ctrl.onAdd=function(){
-    const d=L.DomUtil.create('div','mp-bnd-ctrl');
-    d.innerHTML='<div class="mp-bnd-title">Boundaries</div>'+
-      ['district','tehsil','block'].map(k=>
-        '<button class="mp-bnd-btn" data-kind="'+k+'" onclick="mpSetBoundary(\''+k+'\',true)">'+
-        window.MP_BOUNDARY.cfg[k].label+'</button>').join('');
-    L.DomEvent.disableClickPropagation(d);
-    return d;
-  };
-  ctrl.addTo(map); map._mpBndCtrl=ctrl;
+  // Boundaries now rendered inside Location Selector panel
 }
 </script>
 <script src="mp_climate_loader.js"></script>
