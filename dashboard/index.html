@@ -102,6 +102,7 @@ body{background:var(--bg-deep);color:var(--text);font-family:'IBM Plex Sans',san
 .nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;}
 #sidebar.collapsed .nav-label,#sidebar.collapsed .nav-section-title,#sidebar.collapsed .sidebar-logo-text,#sidebar.collapsed .nav-badge{display:none;}
 .admin-only{display:none;}
+.mp-bnd-ctrl{display:none;}
 
 /* Main area */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
@@ -412,7 +413,6 @@ canvas.chart-canvas{max-height:100%;}
       <div class="nav-item" onclick="setNav(this,&#39;sat&#39;)"><span class="nav-icon"><i class="fa fa-satellite"></i></span><span class="nav-label">Satellite Viewer</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;cadastral&#39;)"><span class="nav-icon"><i class="fa fa-draw-polygon"></i></span><span class="nav-label">Cadastral Map</span><span class="nav-badge">NEW</span></div>
       <div class="nav-item" onclick="setNav(this,&#39;api&#39;)"><span class="nav-icon"><i class="fa fa-code"></i></span><span class="nav-label">API Access</span></div>
-      <div class="nav-item admin-only" onclick="setNav(this,&#39;admin&#39;)" style="display:none;"><span class="nav-icon"><i class="fa fa-shield"></i></span><span class="nav-label">Admin Panel</span></div>
     </div>
   </nav>
 
@@ -489,19 +489,8 @@ canvas.chart-canvas{max-height:100%;}
             </select>
           </div>
 
-          <div class="loc-field">
-            <label>Block / Tehsil</label>
-            <select id="blockSelect" onchange="onBlockChange(this.value)" disabled="">
-              <option value="">-- Select District First --</option>
-            </select>
-          </div>
-
-          <div class="loc-field">
-            <label>Village</label>
-            <select id="villageSelect" onchange="onVillageChange(this.value)" disabled="">
-              <option value="">-- Select Block First --</option>
-            </select>
-          </div>
+          <select id="blockSelect" onchange="onBlockChange(this.value)" style="display:none;"><option value="">--</option></select>
+          <select id="villageSelect" onchange="onVillageChange(this.value)" style="display:none;"><option value="">--</option></select>
 
           <div class="loc-breadcrumb" id="locBreadcrumb">
             <b>India</b> › <b>Madhya Pradesh</b>
