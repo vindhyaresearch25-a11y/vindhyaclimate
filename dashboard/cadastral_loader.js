@@ -152,6 +152,17 @@
     html += '<div class="legend-row" style="cursor:pointer;margin-top:0.2rem" onclick="window.filterByCrop(null)">' +
       '<span style="color:var(--cyan);font-weight:700">Show All</span></div>';
     el.innerHTML = html;
+
+    var filterSel = document.getElementById('cadCropFilter');
+    if (filterSel) {
+      filterSel.innerHTML = '<option value="">-- All Crops --</option>';
+      for (var crop in cropCounts) {
+        var opt = document.createElement('option');
+        opt.value = crop;
+        opt.textContent = crop + ' (' + cropCounts[crop] + ')';
+        filterSel.appendChild(opt);
+      }
+    }
   }
 
   window.filterByCrop = function(crop){

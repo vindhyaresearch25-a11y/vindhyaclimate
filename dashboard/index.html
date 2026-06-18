@@ -440,6 +440,7 @@ canvas.chart-canvas{max-height:100%;}
           <div class="map-ctrl-btn" title="Heatmap" onclick="toggleLayer(&#39;heat&#39;)" id="heat-btn"><i class="fa fa-temperature-high"></i></div>
            <div class="map-ctrl-btn" title="Rainfall" onclick="toggleLayer(&#39;rain&#39;)" id="rain-btn"><i class="fa fa-cloud-rain"></i></div>
            <div class="map-ctrl-btn" title="Village Boundaries" onclick="toggleVillageBoundaries()" id="village-bnd-btn"><i class="fa fa-draw-polygon"></i></div>
+           <div class="map-ctrl-btn" title="Cadastral Map" onclick="toggleCadLayer()" id="cad-map-btn"><i class="fa fa-border-all"></i></div>
            <div class="map-ctrl-btn" title="Fullscreen" onclick="toggleFullMap()"><i class="fa fa-expand"></i></div>
         </div>
         <div class="map-legend" id="mapLegend">
@@ -863,14 +864,20 @@ canvas.chart-canvas{max-height:100%;}
             <div class="btm-pane" id="pane-cadastral">
               <div class="section-header"><i class="fa fa-draw-polygon" style="color:var(--orange);font-size:0.7rem"></i><div class="section-title">सीमांक CADASTRAL — <span id="cad-village-name">SAHIJANA</span> <span style="color:var(--teal)">|</span> KHASRA <span id="cad-selected-khasra" style="color:var(--orange)">—</span></div></div>
               <div style="overflow-y:auto;flex:1;padding:0.5rem;">
-                <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
-                  <div style="flex:1;">
+                <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+                  <div style="flex:1;min-width:100px;">
                     <label style="font-size:0.65rem;font-weight:600;color:var(--text-dim);display:block;margin-bottom:0.2rem;">SEARCH KHASRA / PARCEL</label>
                     <select id="cadKhasraSelect" onchange="onKhasraChange(this.value)" style="width:100%;padding:0.3rem;border-radius:4px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:0.65rem;">
                       <option value="">-- Choose from 1,000 Parcels --</option>
                     </select>
                   </div>
-                  <div style="flex:1;text-align:right;">
+                  <div style="flex:1;min-width:100px;">
+                    <label style="font-size:0.65rem;font-weight:600;color:var(--text-dim);display:block;margin-bottom:0.2rem;">FILTER BY CROP</label>
+                    <select id="cadCropFilter" onchange="window.filterByCrop(this.value||null)" style="width:100%;padding:0.3rem;border-radius:4px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:0.65rem;">
+                      <option value="">-- All Crops --</option>
+                    </select>
+                  </div>
+                  <div style="flex-shrink:0;text-align:right;">
                     <button onclick="flyToKhasra()" style="background:var(--cyan);border:none;padding:0.3rem 0.6rem;border-radius:4px;color:#fff;cursor:pointer;font-size:0.6rem;font-weight:600;"><i class="fa fa-location-crosshairs"></i> FLY TO</button>
                     <button onclick="toggleCadLayer()" style="background:var(--teal);border:none;padding:0.3rem 0.6rem;border-radius:4px;color:#fff;cursor:pointer;font-size:0.6rem;font-weight:600;margin-left:0.3rem;"><i class="fa fa-layer-group"></i> TOGGLE</button>
                     <button onclick="showAllParcels()" style="background:var(--orange);border:none;padding:0.3rem 0.6rem;border-radius:4px;color:#fff;cursor:pointer;font-size:0.6rem;font-weight:600;margin-left:0.3rem;"><i class="fa fa-eye"></i> ALL</button>
