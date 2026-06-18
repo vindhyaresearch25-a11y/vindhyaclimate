@@ -12,17 +12,6 @@
 
   var layerDefs = [
     {
-      group: 'Administrative Boundaries',
-      icon: 'fa-draw-polygon',
-      expanded: true,
-      layers: [
-        { id: 'bnd_district', label: 'District', icon: 'fa-flag', defaultOn: false, toggle: function(on) { toggleBoundaryLayer('district', on); } },
-        { id: 'bnd_tehsil', label: 'Tehsil', icon: 'fa-flag', defaultOn: false, toggle: function(on) { toggleBoundaryLayer('tehsil', on); } },
-        { id: 'bnd_block', label: 'Block', icon: 'fa-flag', defaultOn: false, toggle: function(on) { toggleBoundaryLayer('block', on); } },
-        { id: 'bnd_village', label: 'Village', icon: 'fa-flag', defaultOn: false, toggle: function(on) { toggleBoundaryLayer('village', on); } }
-      ]
-    },
-    {
       group: 'Agricultural Layers',
       icon: 'fa-leaf',
       expanded: false,
@@ -87,46 +76,6 @@
       map.addLayer(simLayers[id]);
     } else {
       if (simLayers[id]) { map.removeLayer(simLayers[id]); }
-    }
-  }
-
-  function toggleBoundaryLayer(kind, show) {
-    var map = window.leafletMap;
-    if (!map) return;
-    if (kind === 'village') {
-      if (show) {
-        if (window._villageLayer && !map.hasLayer(window._villageLayer)) map.addLayer(window._villageLayer);
-        else if (window.loadVillageBoundaries) {
-          var dk = document.getElementById('districtSelect')?.value;
-          if (dk) window.loadVillageBoundaries(dk);
-        }
-      } else {
-        if (window._villageLayer && map.hasLayer(window._villageLayer)) map.removeLayer(window._villageLayer);
-      }
-      return;
-    }
-    var B = window.MP_BOUNDARY;
-    if (!B || !B.cfg || !B.cfg[kind]) return;
-    if (show) {
-      if (B.layers[kind]) {
-        if (!map.hasLayer(B.layers[kind])) map.addLayer(B.layers[kind]);
-      } else {
-        // Load the boundary layer
-        mpSetBoundary(kind, false);
-        // Poll for layer to be created
-        var iv = setInterval(function() {
-          if (B.layers[kind] && !map.hasLayer(B.layers[kind])) {
-            map.addLayer(B.layers[kind]);
-            clearInterval(iv);
-          }
-        }, 200);
-        setTimeout(function() { clearInterval(iv); }, 5000);
-      }
-    } else {
-      // Hide boundary layer
-      if (B.layers[kind] && map.hasLayer(B.layers[kind])) {
-        map.removeLayer(B.layers[kind]);
-      }
     }
   }
 
