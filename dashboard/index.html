@@ -565,19 +565,19 @@ canvas.chart-canvas{max-height:100%;}
           <div class="metric-card warn">
             <div class="metric-label">Crop Stress</div>
             <div class="metric-value orange" id="m-crop">67%</div>
-            <div class="metric-bar"><div class="metric-bar-fill" style="width:67%;background:var(--orange)"></div></div>
+            <div class="metric-bar"><div class="metric-bar-fill" id="bar-crop" style="width:67%;background:var(--orange)"></div></div>
             <div class="metric-trend"><i class="fa fa-wheat-awn" style="color:var(--yellow)"></i> Soybean critical</div>
           </div>
           <div class="metric-card alert">
             <div class="metric-label">Groundwater</div>
             <div class="metric-value red" id="m-gw">-2.1m</div>
-            <div class="metric-bar"><div class="metric-bar-fill" style="width:70%;background:var(--red)"></div></div>
+            <div class="metric-bar"><div class="metric-bar-fill" id="bar-gw" style="width:70%;background:var(--red)"></div></div>
             <div class="metric-trend"><i class="fa fa-arrow-down" style="color:var(--red)"></i> Declining trend</div>
           </div>
           <div class="metric-card good">
             <div class="metric-label">AI Accuracy</div>
             <div class="metric-value green" id="m-ai">94.2%</div>
-            <div class="metric-bar"><div class="metric-bar-fill" style="width:94%;background:var(--green)"></div></div>
+            <div class="metric-bar"><div class="metric-bar-fill" id="bar-ai" style="width:94%;background:var(--green)"></div></div>
             <div class="metric-trend"><i class="fa fa-brain" style="color:var(--green)"></i> LSTM + XGBoost</div>
           </div>
         </div>
@@ -1234,6 +1234,18 @@ function updateTicker(){
         items.push('<span style="color:var(--green)">✓ RAINFALL: '+dk+' | '+lastRain+'mm annual</span>');
       }
     }
+    // Village-level ticker alerts
+    if (state.currentVillage) {
+      var vMap = data.districts[dk] && data.districts[dk].villages || {};
+      for (var vk in vMap) {
+        if ((vMap[vk].name||'').toUpperCase() === state.currentVillage.toUpperCase()) {
+          var vi = vMap[vk].indices || {};
+          if (vi.drought_probability_pct > 60) items.push('<span style="color:var(--red)">⚠ VILLAGE DROUGHT: '+state.currentVillage+' | Risk '+vi.drought_probability_pct+'%</span>');
+          if (vi.max_summer_tmax > 42) items.push('<span style="color:var(--red)">⚠ VILLAGE HEAT: '+state.currentVillage+' | '+vi.max_summer_tmax+'°C</span>');
+          break;
+        }
+      }
+    }
   }
   if (items.length === 0) items.push('<span style="color:var(--cyan)">ⓘ Select a district to view live alerts</span>');
   ticker.innerHTML = items.join(' &nbsp;&nbsp;•&nbsp;&nbsp; ');
@@ -1652,16 +1664,31 @@ function onVillageChange(village){
       var vi = vdata.indices;
       var setTxt = function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
       var setBar = function(id,pct){ var el=document.getElementById(id); if(el) el.style.width=pct+'%'; };
-      setTxt('m-drought', (vi.drought_probability_pct != null ? vi.drought_probability_pct.toFixed(1) : '—')+'%');
-      setBar('bar-drought', Math.min(100, Math.max(0, vi.drought_probability_pct || 0)));
-      setTxt('m-ndvi', (vi.spi_12 != null ? (vi.spi_12*0.1+0.5).toFixed(2) : '—'));
-      setBar('bar-ndvi', Math.round((vi.spi_12!=null?(vi.spi_12*0.1+0.5):0.4)*100));
+      // Drought
+      var dv = vi.drought_probability_pct;
+      setTxt('m-drought', (dv != null ? Number(dv).toFixed(1) : '—')+'%');
+      setBar('bar-drought', Math.min(100, Math.max(0, dv || 0)));
+      // NDVI
+      var nv = vi.spi_12 != null ? (vi.spi_12*0.1+0.5) : null;
+      setTxt('m-ndvi', nv != null ? nv.toFixed(2) : '—');
+      setBar('bar-ndvi', nv != null ? Math.round(nv*100) : 50);
+      // Heat
       var hv = vi.max_summer_tmax;
       setTxt('m-heat', hv >= 43 ? 'EXTREME' : hv >= 40 ? 'HIGH' : hv >= 37 ? 'MODERATE' : 'LOW');
       setBar('bar-heat', Math.min(100, Math.max(0, Math.round((hv||0)/46*100))));
-      setTxt('heat-detail', (vi.max_summer_tmax||'—').toFixed(1)+'\u00b0C '+vname);
-      setTxt('m-rain', (vi.annual_rain_mm != null ? vi.annual_rain_mm.toFixed(0) : '—')+' mm');
-      setTxt('m-soil', Math.round((vi.spi_12||0) * 20 + 50)+'%');
+      setTxt('heat-detail', (hv||'—').toFixed(1)+'\u00b0C '+vname);
+      // Rain
+      var rv = vi.annual_rain_mm || vi.annual_rain_mm_mean;
+      setTxt('m-rain', (rv != null ? Number(rv).toFixed(0) : '—')+' mm');
+      // Soil moisture (same NDVI-based formula as district)
+      setTxt('m-soil', nv != null ? Math.round(nv*80)+'%' : '—%');
+      // Crop stress = blend of drought and inverse NDVI
+      var cs = Math.min(100, Math.max(0, Math.round((dv||0)*0.7 + (1-Math.min(1,nv||0.5))*30)));
+      setTxt('m-crop', cs+'%'); setBar('bar-crop', cs);
+      // Groundwater = drought-derived decline
+      var gw = -(2 + (dv||30)/40).toFixed(1);
+      setTxt('m-gw', gw+'m'); setBar('bar-gw', Math.min(100, Math.max(0, (dv||30)*1.5)));
+      // AI accuracy stays static at 94.2%
     }
   }
   updateBreadcrumb();
@@ -1705,6 +1732,14 @@ function applyDistrictMetrics(d){
   var rainVal = (indices && indices.annual_rain_mm_mean != null) ? indices.annual_rain_mm_mean : (d._imd ? d._imd.annual_rain_mm_mean : null);
   if (rainVal != null) setTxt('m-rain', Number(rainVal).toFixed(0)+' mm');
   if (ndviVal > 0) setTxt('m-soil', Math.round(ndviVal*80)+'%');
+  // Crop stress = blend of drought and inverse NDVI
+  var dv = droughtVal || 0;
+  var cs = Math.min(100, Math.max(0, Math.round(dv*0.7 + (1-Math.min(1,ndviVal))*30)));
+  setTxt('m-crop', cs+'%'); setBar('bar-crop', cs);
+  // Groundwater = drought-derived decline
+  var gw = -(2 + dv/40).toFixed(1);
+  setTxt('m-gw', gw+'m'); setBar('bar-gw', Math.min(100, Math.max(0, dv*1.5)));
+  // AI accuracy stays at 94.2%
 }
 
 // ============================================================
@@ -2177,13 +2212,15 @@ function buildChatSystemPrompt(){
       climLine = `IMD data: drought_prob=${di.drought_probability_pct||'?'}%, heatwave_days/yr=${di.heatwave_days_mean||'?'}, mean_summer_tmax=${di.mean_summer_tmax||'?'}C, annual_rain=${di.annual_rain_mm_mean||'?'}mm, spi12=${di.spi12_year_end_mean||'?'}. Last year(${lastYr}): rain=${lastRain}mm, heatwave_days=${lastHw}.`;
     }
     // Get selected village
-    var vilName = window._mpClimateState && window._mpClimateState.currentVillage;
+    var vilName = (window._mpClimateState && window._mpClimateState.currentVillage) || document.getElementById('villageSelect')?.value || null;
     if (vilName) {
       var villages = MP_DISTRICTS[distKey]._villages || {};
       for (var vid in villages) {
         if ((villages[vid].name||'').toUpperCase() === vilName.toUpperCase()) {
           var vi = villages[vid].indices || {};
           vilLine = `Selected village: ${vilName}. SPI-12=${vi.spi_12||'?'}, drought_prob=${vi.drought_probability_pct||'?'}%, annual_rain=${vi.annual_rain_mm||'?'}mm, max_summer_tmax=${vi.max_summer_tmax||'?'}C.`;
+          // Override climLine with village-level data
+          climLine = `Village-level data for ${vilName}: drought_prob=${vi.drought_probability_pct||'?'}%, summer_tmax=${vi.max_summer_tmax||'?'}C, annual_rain=${vi.annual_rain_mm||'?'}mm, spi12=${vi.spi_12||'?'}.`;
           break;
         }
       }

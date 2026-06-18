@@ -401,9 +401,9 @@
         }
       }
     }
-    var ndvi = idx && idx.spi_12 != null ? (idx.spi_12 * 0.1 + 0.5) : 0.45;
-    var rain = idx && idx.annual_rain_mm_mean || 1000;
-    var heat = idx && idx.max_summer_tmax || 38;
+    var ndvi = vi && vi.spi_12 != null ? (vi.spi_12 * 0.1 + 0.5) : (idx && idx.spi_12 != null ? (idx.spi_12 * 0.1 + 0.5) : 0.45);
+    var rain = vi && (vi.annual_rain_mm || vi.annual_rain_mm_mean) || (idx && idx.annual_rain_mm_mean) || 1000;
+    var heat = vi && vi.max_summer_tmax || (idx && idx.max_summer_tmax) || 38;
 
     // Season & soil
     var season = getCurrentSeason();
@@ -516,14 +516,16 @@
     }
 
     // Groundwater indicators (simulated from GEE-style climate data)
-    var gwStress = (idx && idx.drought_probability_pct != null)
+    var gwStress = (vi && vi.drought_probability_pct != null)
+      ? Math.min(100, Math.max(5, vi.drought_probability_pct * 1.1 + (heat > 39 ? 10 : 0) - (rain > 1200 ? 15 : 0)))
+      : (idx && idx.drought_probability_pct != null)
       ? Math.min(100, Math.max(5, idx.drought_probability_pct * 1.1 + (heat > 39 ? 10 : 0) - (rain > 1200 ? 15 : 0)))
       : (d.drought != null ? Math.min(100, d.drought * 1.05) : 50);
     var gwStressLabel = gwStress > 65 ? 'OVER-EXPLOITED' : gwStress > 45 ? 'SEMI-CRITICAL' : gwStress > 30 ? 'SAFE' : 'ABUNDANT';
     var gwStressColor = gwStress > 65 ? 'var(--red)' : gwStress > 45 ? 'var(--orange)' : gwStress > 30 ? 'var(--green)' : 'var(--cyan)';
     setTxt('agri-gw-stress', gwStress.toFixed(0)+'% '+gwStressLabel, gwStressColor);
     // GW level (meters below ground)
-    var gwLevel = (20 + (100 - gwStress) * 0.3 + (Math.random() * 2 - 1)).toFixed(1);
+    var gwLevel = (20 + (100 - gwStress) * 0.3 + ((d.name||'').charCodeAt(0)%5-2)*0.4).toFixed(1);
     setTxt('agri-gw-level', gwLevel+' m bgl');
     // Irrigation need
     var irrNeed = season === 'kharif' ? (rain < 800 ? 'HIGH' : 'LOW') : season === 'rabi' ? 'MODERATE' : 'HIGH';
@@ -542,8 +544,17 @@
     var dnEl = document.getElementById('ecoDistName');
     if (dnEl) dnEl.textContent = '— '+ d.name + (villageName ? ' › '+villageName : '');
     var idx = d.indices;
-    var ndvi = idx && idx.spi_12 != null ? (idx.spi_12 * 0.1 + 0.45) : 0.40;
-    var rain = idx && idx.annual_rain_mm_mean || 1000;
+    var vi = null;
+    if (villageName) {
+      var vmap = d.villages || {};
+      for (var id in vmap) {
+        if ((vmap[id].name||'').toUpperCase() === (villageName||'').toUpperCase()) {
+          vi = vmap[id].indices; break;
+        }
+      }
+    }
+    var ndvi = vi && vi.spi_12 != null ? (vi.spi_12 * 0.1 + 0.5) : (idx && idx.spi_12 != null ? (idx.spi_12 * 0.1 + 0.45) : 0.40);
+    var rain = vi && (vi.annual_rain_mm || vi.annual_rain_mm_mean) || (idx && idx.annual_rain_mm_mean) || 1000;
     // Derive ecological metrics from available data
     var forestCover = Math.min(45, Math.max(5, Math.round(rain / 40 + ndvi * 20)));
     var bioScore = Math.min(100, Math.max(20, Math.round(forestCover * 1.5 + ndvi * 30)));
@@ -567,7 +578,7 @@
         + '<strong>Forest Cover:</strong> '+forestCover+'% of district area<br>'
         + '<strong>Water Bodies:</strong> ~'+waterBody+'% of area<br>'
         + '<strong>Deforestation Pressure:</strong> '+deforestRisk+'<br>'
-        + (villageName ? '<em style="color:var(--cyan)">Data area-weighted for '+villageName+'</em>' : '<em style="color:var(--text-dim)">Select a village for area-wise ecological breakdown</em>');
+        + (villageName ? '<em style="color:var(--cyan)">Using village-level indices for '+villageName+'</em>' : '<em style="color:var(--text-dim)">Select a village for village-level ecological breakdown</em>');
     }
   }
 
