@@ -486,8 +486,19 @@ canvas.chart-canvas{max-height:100%;}
             </select>
           </div>
 
-          <select id="blockSelect" onchange="onBlockChange(this.value)" style="display:none;"><option value="">--</option></select>
-          <select id="villageSelect" onchange="onVillageChange(this.value)" style="display:none;"><option value="">--</option></select>
+          <div class="loc-field" id="blockField" style="display:none;">
+            <label>Tehsil / Block</label>
+            <select id="blockSelect" onchange="onBlockChange(this.value)">
+              <option value="">-- Select District First --</option>
+            </select>
+          </div>
+
+          <div class="loc-field" id="villageField" style="display:none;">
+            <label>Village</label>
+            <select id="villageSelect" onchange="onVillageChange(this.value)">
+              <option value="">-- Select Block First --</option>
+            </select>
+          </div>
 
           <div class="loc-breadcrumb" id="locBreadcrumb">
             <b>India</b> › <b>Madhya Pradesh</b>
@@ -1324,11 +1335,15 @@ function populateDistricts(){
 function onDistrictChange(distKey){
   const blockSel=document.getElementById('blockSelect');
   const villageSel=document.getElementById('villageSelect');
+  const blockField=document.getElementById('blockField');
+  const villageField=document.getElementById('villageField');
 
   // Reset downstream
   blockSel.innerHTML='<option value="">-- Select Block --</option>';
   villageSel.innerHTML='<option value="">-- Select Block First --</option>';
   villageSel.disabled=true;
+  blockField.style.display='none';
+  villageField.style.display='none';
 
   if(!distKey || !MP_DISTRICTS[distKey]){
     blockSel.disabled=true;
@@ -1338,7 +1353,8 @@ function onDistrictChange(distKey){
   }
 
   const dist=MP_DISTRICTS[distKey];
-  // Populate blocks
+  // Show block field
+  blockField.style.display='block';
   blockSel.disabled=false;
   Object.keys(dist.blocks).forEach(b=>{
     const o=document.createElement('option');
@@ -1571,17 +1587,20 @@ function updateLegend(hazardKind){
 
 function onBlockChange(block){
   const villageSel=document.getElementById('villageSelect');
+  const villageField=document.getElementById('villageField');
   villageSel.innerHTML='<option value="">-- Select Village --</option>';
 
   const distKey=document.getElementById('districtSelect').value;
   if(!block || !distKey || !MP_DISTRICTS[distKey]){
     villageSel.disabled=true;
+    villageField.style.display='none';
     villageSel.innerHTML='<option value="">-- Select Block First --</option>';
     updateBreadcrumb();
     return;
   }
 
   const villages=MP_DISTRICTS[distKey].blocks[block]||[];
+  villageField.style.display='block';
   villageSel.disabled=false;
   villages.forEach(v=>{
     const o=document.createElement('option');
@@ -1623,10 +1642,15 @@ function onVillageChange(village){
     if (vdata && vdata.indices) {
       var vi = vdata.indices;
       var setTxt = function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
+      var setBar = function(id,pct){ var el=document.getElementById(id); if(el) el.style.width=pct+'%'; };
       setTxt('m-drought', (vi.drought_probability_pct != null ? vi.drought_probability_pct.toFixed(1) : '—')+'%');
+      setBar('bar-drought', Math.min(100, Math.max(0, vi.drought_probability_pct || 0)));
       setTxt('m-ndvi', (vi.spi_12 != null ? (vi.spi_12*0.1+0.5).toFixed(2) : '—'));
-      setTxt('m-heat', vi.max_summer_tmax >= 43 ? 'EXTREME' : vi.max_summer_tmax >= 40 ? 'HIGH' : vi.max_summer_tmax >= 37 ? 'MODERATE' : 'LOW');
-      setTxt('heat-detail', (vi.max_summer_tmax||'—').toFixed(1)+'°C '+vname);
+      setBar('bar-ndvi', Math.round((vi.spi_12!=null?(vi.spi_12*0.1+0.5):0.4)*100));
+      var hv = vi.max_summer_tmax;
+      setTxt('m-heat', hv >= 43 ? 'EXTREME' : hv >= 40 ? 'HIGH' : hv >= 37 ? 'MODERATE' : 'LOW');
+      setBar('bar-heat', Math.min(100, Math.max(0, Math.round((hv||0)/46*100))));
+      setTxt('heat-detail', (vi.max_summer_tmax||'—').toFixed(1)+'\u00b0C '+vname);
       setTxt('m-rain', (vi.annual_rain_mm != null ? vi.annual_rain_mm.toFixed(0) : '—')+' mm');
       setTxt('m-soil', Math.round((vi.spi_12||0) * 20 + 50)+'%');
     }
