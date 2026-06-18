@@ -25,10 +25,9 @@ _URL_PATCHES = [
     ("'mp_blocks.geojson'",                f"'{GITHUB_BASE}/mp_blocks.geojson'"),
 ]
 
-_JS_FILES = ['auth.js', 'gis_controller.js', 'shapefile_selector.js', 'mp_climate_loader.js', 'dicra_ndvi_loader.js', 'cadastral_loader.js']
+_JS_FILES = ['mp_climate_loader.js', 'dicra_ndvi_loader.js', 'cadastral_loader.js']
 
 
-@st.cache_resource
 def get_html_content():
     with open(os.path.join(DASHBOARD_DIR, 'index.html'), 'r', encoding='utf-8') as f:
         html = f.read()
