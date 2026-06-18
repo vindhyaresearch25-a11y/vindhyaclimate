@@ -102,7 +102,6 @@ body{background:var(--bg-deep);color:var(--text);font-family:'IBM Plex Sans',san
 .nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;}
 #sidebar.collapsed .nav-label,#sidebar.collapsed .nav-section-title,#sidebar.collapsed .sidebar-logo-text,#sidebar.collapsed .nav-badge{display:none;}
 .admin-only{display:none;}
-.mp-bnd-ctrl{display:none;}
 
 /* Main area */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
@@ -1347,6 +1346,17 @@ function onDistrictChange(distKey){
   applyDistrictMetrics(dist);
   updateBreadcrumb();
 
+  // Auto-load district boundary
+  if (window.MP_BOUNDARY && typeof mpSetBoundary === 'function') {
+    var B = window.MP_BOUNDARY;
+    if (B.layers.district) {
+      var map = window.leafletMap;
+      if (map && !map.hasLayer(B.layers.district)) map.addLayer(B.layers.district);
+    } else {
+      mpSetBoundary('district', false);
+    }
+  }
+
   // Load village boundaries for selected district (with hazard coloring if active)
   loadVillageBoundaries(distKey, typeof _activeHazard !== 'undefined' ? _activeHazard : null);
 }
@@ -1971,8 +1981,7 @@ function initMap(){
   const narmada=[[22.9,73.8],[22.5,75.5],[22.3,77],[22.0,78.5],[21.7,80],[21.5,82]];
   L.polyline(narmada,{color:'#5cc3cd',weight:2,opacity:0.6,dashArray:'4,6'}).addTo(map).bindPopup('<b style="color:#5cc3cd">Narmada River</b>');
 
-  // Admin boundary layers
-  mpAddBoundaryControl(map);
+  // Admin boundary layers are managed by GIS Controller (gis_controller.js)
   // Village boundary layers (on-demand per district)
   window._villageBoundaries = {};
 }
