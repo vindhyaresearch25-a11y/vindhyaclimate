@@ -1384,9 +1384,9 @@ function onDistrictChange(distKey){
     blockSel.appendChild(o);
   });
 
-  // Fly map + update metrics
+  // Fly map + update metrics with current year's data
   flyToDistrict(distKey);
-  applyDistrictMetrics(dist);
+  setTimelineYear(parseInt(document.getElementById('tlSlider')?.value || 2024));
   updateBreadcrumb();
 
   // Load village boundaries for selected district (with hazard coloring if active)
@@ -1662,33 +1662,60 @@ function onVillageChange(village){
     }
     if (vdata && vdata.indices) {
       var vi = vdata.indices;
+      // Get current year from timeline slider
+      var curYear = parseInt(document.getElementById('tlSlider')?.value || 2024);
+      // Try to get district year variation to scale village data
+      var dk2 = document.getElementById('districtSelect').value;
+      var yrRatio = {rain:1, spi:0};
+      if (window._mpClimateData && dk2) {
+        var ann2 = window._mpClimateData.districts[dk2] && window._mpClimateData.districts[dk2].annual;
+        if (ann2 && ann2.years) {
+          var yi2 = ann2.years.indexOf(curYear);
+          if (yi2 >= 0) {
+            var dRain = ann2.annual_rain_mm[yi2];
+            var dSpi = ann2.spi_12[yi2];
+            // District mean values for scaling
+            var di2 = window._mpClimateData.districts[dk2].indices || {};
+            var dRainMean = di2.annual_rain_mm_mean || dRain;
+            var dSpiMean = di2.spi12_year_end_mean || 0;
+            if (dRainMean > 0) yrRatio.rain = dRain / dRainMean;
+            yrRatio.spi = dSpi - dSpiMean;
+          }
+        }
+      }
       var setTxt = function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
       var setBar = function(id,pct){ var el=document.getElementById(id); if(el) el.style.width=pct+'%'; };
       // Drought
       var dv = vi.drought_probability_pct;
+      // Scale drought by SPI anomaly
+      if (yrRatio.spi != 0 && dv != null) dv = Math.min(100, Math.max(0, dv - yrRatio.spi * 6));
       setTxt('m-drought', (dv != null ? Number(dv).toFixed(1) : '—')+'%');
       setBar('bar-drought', Math.min(100, Math.max(0, dv || 0)));
       // NDVI
-      var nv = vi.spi_12 != null ? (vi.spi_12*0.1+0.5) : null;
+      var nv = vi.spi_12 != null ? (vi.spi_12 * 0.1 + 0.5) : null;
+      if (nv != null && yrRatio.spi != 0) nv = Math.max(0.1, Math.min(0.9, nv + yrRatio.spi * 0.1));
       setTxt('m-ndvi', nv != null ? nv.toFixed(2) : '—');
       setBar('bar-ndvi', nv != null ? Math.round(nv*100) : 50);
       // Heat
       var hv = vi.max_summer_tmax;
+      // Scale heat by yearly HW days anomaly
+      if (yrRatio.spi < 0 && hv) hv = hv + Math.abs(yrRatio.spi) * 0.2;
+      if (hv) hv = Math.min(50, hv);
       setTxt('m-heat', hv >= 43 ? 'EXTREME' : hv >= 40 ? 'HIGH' : hv >= 37 ? 'MODERATE' : 'LOW');
       setBar('bar-heat', Math.min(100, Math.max(0, Math.round((hv||0)/46*100))));
-      setTxt('heat-detail', (hv||'—').toFixed(1)+'\u00b0C '+vname);
+      setTxt('heat-detail', (hv||'—').toFixed(1)+'\u00b0C '+vname+' ('+curYear+')');
       // Rain
       var rv = vi.annual_rain_mm || vi.annual_rain_mm_mean;
+      if (rv != null && yrRatio.rain != 1) rv = rv * yrRatio.rain;
       setTxt('m-rain', (rv != null ? Number(rv).toFixed(0) : '—')+' mm');
-      // Soil moisture (same NDVI-based formula as district)
+      // Soil moisture
       setTxt('m-soil', nv != null ? Math.round(nv*80)+'%' : '—%');
-      // Crop stress = blend of drought and inverse NDVI
+      // Crop stress
       var cs = Math.min(100, Math.max(0, Math.round((dv||0)*0.7 + (1-Math.min(1,nv||0.5))*30)));
       setTxt('m-crop', cs+'%'); setBar('bar-crop', cs);
-      // Groundwater = drought-derived decline
+      // Groundwater
       var gw = -(2 + (dv||30)/40).toFixed(1);
       setTxt('m-gw', gw+'m'); setBar('bar-gw', Math.min(100, Math.max(0, (dv||30)*1.5)));
-      // AI accuracy stays static at 94.2%
     }
   }
   updateBreadcrumb();
@@ -1921,6 +1948,7 @@ function setTimelineYear(year){
   if (yearLabel) yearLabel.textContent = year;
   // Update right-panel metrics for this year
   var dk = document.getElementById('districtSelect').value;
+  var d = MP_DISTRICTS[dk];
   if (dk) {
     var hwVal = null, rainVal = null, spiVal = null;
     // Try historical data first
@@ -1953,6 +1981,40 @@ function setTimelineYear(year){
     if (elHw) { elHw.textContent = prefix + (hwVal != null ? hwVal.toFixed(1) : '—'); elHw.style.color = isFc ? 'var(--orange)' : ''; }
     if (elRain) { elRain.textContent = prefix + (rainVal != null ? rainVal.toFixed(0)+' mm' : '—'); elRain.style.color = isFc ? 'var(--orange)' : ''; }
     if (elSpi) { elSpi.textContent = prefix + (spiVal != null ? spiVal.toFixed(2) : '—'); elSpi.style.color = isFc ? 'var(--orange)' : ''; }
+    // Also update main metric cards with this year's data
+    if (d && (hwVal != null || rainVal != null || spiVal != null)) {
+      var setTxt = function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
+      var setBar = function(id,pct){ var el=document.getElementById(id); if(el) el.style.width=pct+'%'; };
+      // Drought from SPI-12
+      var droughtVal = spiVal != null ? Math.min(100, Math.max(0, Math.round(50 - spiVal * 25))) : (d.drought || 50);
+      setTxt('m-drought', droughtVal+'%');
+      setBar('bar-drought', droughtVal);
+      // NDVI from SPI-12 (year-specific) — prefer real NDVI if available
+      var nv = spiVal != null ? Math.max(0.1, Math.min(0.9, (spiVal * 0.1 + 0.5))) : (d.ndvi || 0.42);
+      setTxt('m-ndvi', nv.toFixed(2));
+      setBar('bar-ndvi', Math.round(nv*100));
+      // Heat from yearly heatwave days
+      var hv = d.heat || 38;
+      if (hwVal != null) {
+        var heatPct = Math.min(100, Math.max(0, Math.round(hwVal / 30 * 100)));
+        hv = 35 + hwVal * 0.3;
+      }
+      var heatLabel = hv >= 43 ? 'EXTREME' : hv >= 40 ? 'HIGH' : hv >= 37 ? 'MODERATE' : 'LOW';
+      setTxt('m-heat', heatLabel);
+      setBar('bar-heat', Math.min(100, Math.max(0, Math.round((hv/46)*100))));
+      setTxt('heat-detail', hv.toFixed(1)+'\u00b0C '+ (d.name||'') + ' ('+year+')');
+      // Rain — use yearly value
+      var rv = rainVal != null ? Number(rainVal) : (d._imd ? d._imd.annual_rain_mm_mean : null);
+      if (rv != null) setTxt('m-rain', rv.toFixed(0)+' mm');
+      // Soil moisture from NDVI
+      if (nv > 0) setTxt('m-soil', Math.round(nv*80)+'%');
+      // Crop stress from drought + inverse NDVI
+      var cs = Math.min(100, Math.max(0, Math.round(droughtVal*0.7 + (1-Math.min(1,nv))*30)));
+      setTxt('m-crop', cs+'%'); setBar('bar-crop', cs);
+      // Groundwater from drought
+      var gw = -(2 + droughtVal/40).toFixed(1);
+      setTxt('m-gw', gw+'m'); setBar('bar-gw', Math.min(100, Math.max(0, droughtVal*1.5)));
+    }
   }
   // Trigger chart/data refresh for this year
   if (typeof _mpClimateRefresh === 'function') _mpClimateRefresh();
