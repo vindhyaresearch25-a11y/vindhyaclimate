@@ -2254,12 +2254,12 @@ let chatLangHi=false;
 let chatBusy=false;
 
 const chatGreetings={
-  en:"Namaste! I'm the Krishi AI Assistant for the VINDHYA Climate Intelligence platform. Ask me about weather, drought, rainfall, crop advice, soil moisture, or any district in Madhya Pradesh. How can I help?",
-  hi:"\u0928\u092e\u0938\u094d\u0924\u0947! \u092e\u0948\u0902 MP \u0915\u094d\u0932\u093e\u0907\u092e\u0947\u091f \u0907\u0902\u091f\u0947\u0932\u093f\u091c\u0947\u0902\u0938 \u092a\u094d\u0932\u0947\u091f\u092b\u0949\u0930\u094d\u092e \u0915\u093e \u0915\u044d\u0937\u093f AI \u0938\u0939\u093e\u092f\u0915 \u0939\u0942\u0901\u0964 \u092e\u094c\u0938\u092e, \u0938\u0942\u0916\u093e, \u0935\u0930\u094d\u0937\u093e, \u092b\u0938\u0932 \u0938\u0932\u093e\u0939, \u092e\u093f\u091f\u094d\u091f\u0940 \u0915\u0940 \u0928\u092e\u0940 \u092f\u093e \u092e\u0927\u094d\u092f \u092a\u094d\u0930\u0926\u0947\u0936 \u0915\u0947 \u0915\u093f\u0938\u0940 \u092d\u0940 \u091c\u093f\u0932\u0947 \u0915\u0947 \u092c\u093e\u0930\u0947 \u092e\u0947\u0902 \u092a\u0942\u091b\u0947\u0902\u0964 \u092e\u0948\u0902 \u0915\u0948\u0938\u0947 \u092e\u0926\u0926 \u0915\u0930 \u0938\u0915\u0924\u093e \u0939\u0942\u0901?"
+  en:"Namaste! I am your AI Agriculture Expert for India. Ask me about crops, weather, mandi prices, schemes, or pests. 🌱",
+  hi:"नमस्ते! मैं आपका AI कृषि विशेषज्ञ हूँ। फसल, मौसम, मंडी भाव, योजनाओं या कीट के बारे में पूछें। 🌱"
 };
 const chatChips={
-  en:["Will it rain in Mandla this week?","Best crop for drought in Jhabua?","Heatwave safety tips","Should I delay soybean sowing?"],
-  hi:["\u0907\u0938 \u0938\u092a\u094d\u0924\u093e\u0939 \u092e\u0902\u0921\u0932\u093e \u092e\u0947\u0902 \u092c\u093e\u0930\u093f\u0936?","\u091d\u093e\u092c\u0941\u0906 \u0938\u0942\u0916\u0947 \u0915\u0947 \u0932\u093f\u090f \u092c\u0947\u0939\u0924\u0930 \u092b\u0938\u0932?","\u0939\u0940\u091f\u0935\u0947\u0935 \u0938\u0941\u0930\u0915\u094d\u0937\u093e \u0938\u0941\u091d\u093e\u0935","\u0915\u094d\u092f\u093e \u0938\u094b\u092f\u093e\u092c\u0940\u0928 \u092c\u0941\u0935\u093e\u0908 \u091f\u093e\u0932\u0942\u0901?"]
+  en:["Best crop for my district?","Which crop gives highest profit?","Nearest mandi & today's prices?","Government schemes for farmers?","Pest & disease control advice?","Which crop this season?"],
+  hi:["मेरे जिले के लिए सबसे अच्छी फसल?","सबसे अधिक लाभ देने वाली फसल?","निकटतम मंडी और आज के भाव?","किसानों के लिए सरकारी योजनाएँ?","कीट और रोग नियंत्रण?","इस मौसम में कौन-सी फसल उगाएँ?"]
 };
 
 function initChat(){
@@ -2392,16 +2392,42 @@ function buildChatSystemPrompt(){
   var langLine=chatLangHi
     ? "IMPORTANT: Reply ONLY in Hindi (Devanagari script)."
     : "Reply in English unless the user writes in Hindi, in which case reply in Hindi.";
-  return `You are the Krishi AI Assistant inside the VINDHYA Climate Intelligence Platform, a dashboard for village-level climate risk and agriculture in MP, India.
-Help farmers, panchayat officials, and analysts with: weather, rainfall, drought, heatwaves, soil moisture, NDVI/crop health, irrigation timing, crop selection, and PMFBY crop insurance.
-Give practical, concise, actionable advice (2-5 short sentences or a tight bullet list). Use realistic agronomy for central India (soybean, cotton, wheat, paddy, gram, maize).
+  return `You are an AI Agriculture Expert for India. Answer farmer queries using district-wise data, weather forecasts, soil information, market prices, government schemes, and scientific crop recommendations. Provide responses in both English and Hindi. Use simple language suitable for farmers.
+
+For every query, provide where possible:
+• Recommended crop(s)
+• Expected yield
+• Estimated profit
+• Fertilizer recommendation
+• Irrigation requirement
+• Pest and disease precautions
+• Nearest mandi information
+• Current mandi prices (estimate if unknown)
+• Weather advisory
+• Relevant government schemes
+
+Use this structure for common questions:
+
+1. Best crop for my district? → Based on your district's climate, soil, rainfall, and market demand, the recommended crops are ______.
+2. Which crop gives highest profit? → The most profitable crops are ______ with estimated profit of ₹_____ per acre.
+3. Nearest mandi and today's prices? → Nearest mandi: ______. Today's market price: ______.
+4. Which crop is in high demand? → Currently, the highest demand crops are ______.
+5. How much fertilizer is needed? → N: ___ kg/acre, P: ___ kg/acre, K: ___ kg/acre.
+6. Best seed variety? → Recommended varieties: 1. ______ 2. ______
+7. Expected yield per acre? → Expected yield: ______ quintals/acre.
+8. Government schemes? → Applicable: PM-KISAN, PMFBY, Soil Health Card, KCC, state-specific schemes.
+9. Pest and disease control? → Major risks: ______. Recommended control: ______.
+10. Which crop this season? → Considering weather, soil, water, market demand: ______.
+
+Always answer with the district/village data provided below. Give actionable advice. Keep it practical for a farmer.
+
 ${locLine}
 ${climLine}
 ${vilLine}
 ${fcLine}
-Active alerts on the platform: heatwave in Indore/Dhar/Barwani (~44C), drought watch in Bundelkhand (Sagar/Damoh/Tikamgarh), NDVI deficit in Jhabua, good rainfall forecast for Mandla/Balaghat.
+Active alerts: heatwave in Indore/Dhar/Barwani (~44C), drought watch in Bundelkhand (Sagar/Damoh/Tikamgarh), NDVI deficit in Jhabua, good rainfall forecast for Mandla/Balaghat.
 Cadastral context: ${buildCadastralContext()}
-If asked for exact live numbers you don't have, say it's an estimate and suggest checking the relevant dashboard panel. ${langLine}`;
+If asked for exact live numbers you don't have, say it's an estimate based on available data. ${langLine}`;
 }
 
 function askChatAboutCadastral(){
