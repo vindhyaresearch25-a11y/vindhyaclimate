@@ -390,7 +390,7 @@
     var d = state.data && state.data.districts[districtKey];
     if (!d) return;
     var dnEl = document.getElementById('agriDistName');
-    if (dnEl) dnEl.textContent = '— '+ d.name + (villageName ? ' › '+villageName : '');
+    if (dnEl) dnEl.textContent = '— '+ d.name + (villageName ? ' › '+villageName : '') + (window._hazardYear ? ' | Year '+window._hazardYear : '');
     var idx = d.indices;
     var vi = null;
     if (villageName) {
@@ -401,9 +401,26 @@
         }
       }
     }
-    var ndvi = vi && vi.spi_12 != null ? (vi.spi_12 * 0.1 + 0.5) : (idx && idx.spi_12 != null ? (idx.spi_12 * 0.1 + 0.5) : 0.45);
-    var rain = vi && (vi.annual_rain_mm || vi.annual_rain_mm_mean) || (idx && idx.annual_rain_mm_mean) || 1000;
-    var heat = vi && vi.max_summer_tmax || (idx && idx.max_summer_tmax) || 38;
+    var ndvi, rain, heat;
+    // Priority: 1) Village indices, 2) Year-specific annual data, 3) District mean
+    if (vi && vi.spi_12 != null) {
+      ndvi = vi.spi_12 * 0.1 + 0.5;
+      rain = vi.annual_rain_mm || vi.annual_rain_mm_mean;
+      heat = vi.max_summer_tmax;
+    }
+    // Year-specific override from district annual data
+    var yr = window._hazardYear;
+    if (yr && d.annual && d.annual.years) {
+      var yi = d.annual.years.indexOf(parseInt(yr));
+      if (yi >= 0 && d.annual.spi_12[yi] != null) {
+        ndvi = d.annual.spi_12[yi] * 0.1 + 0.5;
+        rain = d.annual.annual_rain_mm[yi];
+        heat = d.annual.heatwave_days[yi] > 4 ? 43 : d.annual.heatwave_days[yi] > 1 ? 40 : 37;
+      }
+    }
+    if (ndvi == null) ndvi = idx && idx.spi_12 != null ? (idx.spi_12 * 0.1 + 0.5) : 0.45;
+    if (rain == null) rain = idx && idx.annual_rain_mm_mean || 1000;
+    if (heat == null) heat = idx && idx.max_summer_tmax || 38;
 
     // Season & soil
     var season = getCurrentSeason();
@@ -542,7 +559,7 @@
     var d = state.data && state.data.districts[districtKey];
     if (!d) return;
     var dnEl = document.getElementById('ecoDistName');
-    if (dnEl) dnEl.textContent = '— '+ d.name + (villageName ? ' › '+villageName : '');
+    if (dnEl) dnEl.textContent = '— '+ d.name + (villageName ? ' › '+villageName : '') + (window._hazardYear ? ' | Year '+window._hazardYear : '');
     var idx = d.indices;
     var vi = null;
     if (villageName) {
@@ -553,8 +570,21 @@
         }
       }
     }
-    var ndvi = vi && vi.spi_12 != null ? (vi.spi_12 * 0.1 + 0.5) : (idx && idx.spi_12 != null ? (idx.spi_12 * 0.1 + 0.45) : 0.40);
-    var rain = vi && (vi.annual_rain_mm || vi.annual_rain_mm_mean) || (idx && idx.annual_rain_mm_mean) || 1000;
+    var ndvi, rain;
+    if (vi && vi.spi_12 != null) {
+      ndvi = vi.spi_12 * 0.1 + 0.5;
+      rain = vi.annual_rain_mm || vi.annual_rain_mm_mean;
+    }
+    var yr = window._hazardYear;
+    if (yr && d.annual && d.annual.years) {
+      var yi = d.annual.years.indexOf(parseInt(yr));
+      if (yi >= 0 && d.annual.spi_12[yi] != null) {
+        ndvi = d.annual.spi_12[yi] * 0.1 + 0.45;
+        rain = d.annual.annual_rain_mm[yi];
+      }
+    }
+    if (ndvi == null) ndvi = idx && idx.spi_12 != null ? (idx.spi_12 * 0.1 + 0.45) : 0.40;
+    if (rain == null) rain = idx && idx.annual_rain_mm_mean || 1000;
     // Derive ecological metrics from available data
     var forestCover = Math.min(45, Math.max(5, Math.round(rain / 40 + ndvi * 20)));
     var bioScore = Math.min(100, Math.max(20, Math.round(forestCover * 1.5 + ndvi * 30)));
