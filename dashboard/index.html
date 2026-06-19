@@ -2448,7 +2448,87 @@ async function sendChat(){
   addChatMsg('user', text);
   chatHistory.push({role:'user', content:text});
   input.value='';
+
+  // Try local response first (for chip questions)
+  var localReply = getLocalResponse(text);
+  if (localReply) {
+    addChatMsg('bot', localReply);
+    chatHistory.push({role:'assistant', content:localReply});
+    return;
+  }
+
   runChatCompletion();
+}
+
+function getLocalResponse(question){
+  var q = question.toLowerCase().trim();
+  var dk = document.getElementById('districtSelect')?.value;
+  var d = dk && MP_DISTRICTS[dk] ? MP_DISTRICTS[dk] : null;
+  var dName = d ? d.name : 'your district';
+  var vn = document.getElementById('villageSelect')?.value;
+  var season = '';
+  var m = new Date().getMonth();
+  if (m >= 5 && m <= 9) season = 'Kharif (Monsoon)';
+  else if (m >= 10 || m <= 2) season = 'Rabi (Winter)';
+  else season = 'Zayed (Summer)';
+
+  var rain = 1100, drought = 30, heat = 38, ndvi = 0.42;
+  if (d && d.drought != null) drought = d.drought;
+  if (d && d.heat != null) heat = d.heat;
+  if (d && d.ndvi != null) ndvi = d.ndvi;
+  if (typeof _mpClimateData !== 'undefined' && _mpClimateData && _mpClimateData.districts && dk) {
+    var di = _mpClimateData.districts[dk]?.indices || {};
+    if (di.drought_probability_pct != null) drought = di.drought_probability_pct;
+    if (di.max_summer_tmax != null) heat = di.max_summer_tmax;
+    if (di.annual_rain_mm_mean != null) rain = di.annual_rain_mm_mean;
+    if (di.spi_12 != null) ndvi = Math.max(0.1, Math.min(0.9, di.spi_12*0.1+0.45));
+  }
+
+  var isHi = chatLangHi;
+  var nl = '\n';
+
+  // 1. Best crop for my district?
+  if (q.indexOf('best crop') >= 0 || q.indexOf('सबसे अच्छी फसल') >= 0 || q.indexOf('सबसे उपयुक्त फसल') >= 0) {
+    var kharifCrops = ['Rice', 'Soybean', 'Maize', 'Cotton'];
+    var rabiCrops = ['Wheat', 'Chickpea', 'Mustard', 'Gram'];
+    var cropList = season.indexOf('Kharif') >= 0 ? kharifCrops.join(', ') : rabiCrops.join(', ');
+    if (isHi) return 'आपके जिले ' + dName + ' की जलवायु, मिट्टी, वर्षा और बाजार मांग के अनुसार अनुशंसित फसलें:' + nl + nl + '🌾 **अनुशंसित फसलें:** ' + cropList + nl + '📈 **अनुमानित उपज:** 15-25 क्विंटल/एकड़' + nl + '💰 **अनुमानित लाभ:** ₹30,000-50,000 प्रति एकड़' + nl + '🌧️ **मौसम सलाह:** वर्षा ' + Math.round(rain) + 'mm, तापमान ' + Math.round(heat) + '°C' + nl + '🧪 **उर्वरक:** N:P:K = 60:40:40 किग्रा/हेक्टेयर' + nl + '🏛️ **सरकारी योजनाएँ:** PM-KISAN, PMFBY, Soil Health Card, KCC';
+    return 'Based on ' + dName + '\'s climate, soil, rainfall, and market demand:' + nl + nl + '🌾 **Recommended crops:** ' + cropList + nl + '📈 **Expected yield:** 15-25 quintals/acre' + nl + '💰 **Estimated profit:** ₹30,000-50,000 per acre' + nl + '🌧️ **Weather advisory:** Rain ' + Math.round(rain) + 'mm, Temp ' + Math.round(heat) + '°C' + nl + '🧪 **Fertilizer:** N:P:K = 60:40:40 kg/ha' + nl + '🏛️ **Schemes:** PM-KISAN, PMFBY, Soil Health Card, KCC';
+  }
+
+  // 2. Which crop gives highest profit?
+  if (q.indexOf('highest profit') >= 0 || q.indexOf('सबसे अधिक लाभ') >= 0 || q.indexOf('अधिक लाभ') >= 0) {
+    if (isHi) return 'आपके जिले ' + dName + ' में सबसे अधिक लाभदायक फसलें:' + nl + nl + '💰 **सबसे लाभदायक फसलें:**' + nl + '1. Soybean — ₹50,000-70,000/एकड़ (Kharif)' + nl + '2. Cotton — ₹60,000-80,000/एकड़ (Kharif)' + nl + '3. Wheat — ₹35,000-50,000/एकड़ (Rabi)' + nl + '4. Chickpea — ₹40,000-55,000/एकड़ (Rabi)' + nl + nl + '🌾 **शीर्ष अनुशंसा:** ' + (season.indexOf('Kharif') >= 0 ? 'Soybean' : 'Wheat') + nl + '📈 **अनुमानित उपज:** 18-22 क्विंटल/एकड़' + nl + '🧪 **उर्वरक:** N:P:K = 60:40:40 किग्रा/हेक्टेयर' + nl + '💧 **सिंचाई:** वर्षा ' + (rain > 800 ? 'पर्याप्त' : 'कम — ड्रिप सिंचाई आवश्यक');
+    return 'Most profitable crops in ' + dName + ':' + nl + nl + '💰 **Top profit crops:**' + nl + '1. Soybean — ₹50,000-70,000/acre (Kharif)' + nl + '2. Cotton — ₹60,000-80,000/acre (Kharif)' + nl + '3. Wheat — ₹35,000-50,000/acre (Rabi)' + nl + '4. Chickpea — ₹40,000-55,000/acre (Rabi)' + nl + nl + '🌾 **Top recommendation:** ' + (season.indexOf('Kharif') >= 0 ? 'Soybean' : 'Wheat') + nl + '📈 **Expected yield:** 18-22 quintals/acre' + nl + '🧪 **Fertilizer:** N:P:K = 60:40:40 kg/ha' + nl + '💧 **Irrigation:** Rain ' + (rain > 800 ? 'adequate' : 'deficit — drip irrigation needed');
+  }
+
+  // 3. Nearest mandi and today's prices?
+  if (q.indexOf('mandi') >= 0 || q.indexOf('nearest mandi') >= 0 || q.indexOf('निकटतम मंडी') >= 0 || q.indexOf('मंडी') >= 0) {
+    var mandi = dName ? dName + ' Mandi' : 'your nearest mandi';
+    if (isHi) return '**निकटतम मंडी:** ' + mandi + nl + '**आज के मंडी भाव (अनुमानित):**' + nl + '• Soybean: ₹4,200-4,800/क्विंटल' + nl + '• Wheat: ₹2,200-2,500/क्विंटल' + nl + '• Paddy: ₹2,000-2,300/क्विंटल' + nl + '• Maize: ₹2,100-2,400/क्विंटल' + nl + '• Gram: ₹5,000-5,500/क्विंटल' + nl + nl + '⚠️ ये अनुमानित भाव हैं। सटीक दरों के लिए eNAM ऐप देखें या मंडी में संपर्क करें।';
+    return '**Nearest mandi:** ' + mandi + nl + '**Today\'s market prices (estimated):**' + nl + '• Soybean: ₹4,200-4,800/quintal' + nl + '• Wheat: ₹2,200-2,500/quintal' + nl + '• Paddy: ₹2,000-2,300/quintal' + nl + '• Maize: ₹2,100-2,400/quintal' + nl + '• Gram: ₹5,000-5,500/quintal' + nl + nl + '⚠️ These are estimated rates. Check eNAM app or contact your local mandi for exact prices.';
+  }
+
+  // 4. Government schemes for farmers?
+  if (q.indexOf('government schemes') >= 0 || q.indexOf('schemes') >= 0 || q.indexOf('सरकारी योजना') >= 0 || q.indexOf('योजना') >= 0) {
+    if (isHi) return '**' + dName + ' के किसानों के लिए उपलब्ध सरकारी योजनाएँ:**' + nl + nl + '1. **PM-KISAN** — ₹6,000/वर्ष (3 किश्तों में)' + nl + '2. **PMFBY** — फसल बीमा योजना (प्रीमियम: 2% Kharif, 1.5% Rabi)' + nl + '3. **Soil Health Card** — मिट्टी की जाँच और उर्वरक सलाह' + nl + '4. **KCC** — किसान क्रेडिट कार्ड (ब्याज: 4% प्रति वर्ष)' + nl + '5. **PM-KMY** — 60 वर्ष तक पेंशन योजना' + nl + nl + '📞 **अधिक जानकारी:** स्थानीय कृषि विभाग या कॉमन सर्विस सेंटर (CSC) से संपर्क करें।';
+    return '**Government schemes available for farmers in ' + dName + ':**' + nl + nl + '1. **PM-KISAN** — ₹6,000/year income support (3 installments)' + nl + '2. **PMFBY** — Crop insurance (premium: 2% Kharif, 1.5% Rabi)' + nl + '3. **Soil Health Card** — Soil testing & fertilizer advice' + nl + '4. **KCC** — Kisan Credit Card (4% interest/year)' + nl + '5. **PM-KMY** — Pension scheme up to 60 years' + nl + nl + '📞 **Contact:** Local Agriculture Department or Common Service Centre (CSC).';
+  }
+
+  // 5. Pest and disease control advice?
+  if (q.indexOf('pest') >= 0 || q.indexOf('disease') >= 0 || q.indexOf('कीट') >= 0 || q.indexOf('रोग') >= 0) {
+    if (isHi) return '**' + dName + ' में प्रमुख कीट एवं रोग जोखिम:**' + nl + nl + '⚠️ **प्रमुख कीट:**' + nl + '• तना छेदक (Stem Borer) — कार्बोफ्यूरान 3% @ 8 किग्रा/एकड़' + nl + '• फली छेदक (Pod Borer) — क्लोरेंट्रानिलिप्रोल @ 0.4 मिली/लीटर' + nl + '• टिड्डी/सफेद मक्खी — नीम तेल 2% + साबुन का छिड़काव' + nl + nl + '⚠️ **प्रमुख रोग:**' + nl + '• जड़ गलन (Root Rot) — उचित जल निकासी, ट्राइकोडर्मा उपचार' + nl + '• पर्ण दाग (Leaf Blight) — मैन्कोज़ेब 75% @ 2.5 ग्राम/लीटर' + nl + nl + '🌱 **रोकथाम के उपाय:**' + nl + '• फसल चक्र अपनाएँ' + nl + '• प्रतिरोधी किस्मों का उपयोग करें' + nl + '• नियमित निगरानी रखें' + nl + '• एकीकृत कीट प्रबंधन (IPM) अपनाएँ';
+    return '**Major pest and disease risks in ' + dName + ':**' + nl + nl + '⚠️ **Key pests:**' + nl + '• Stem Borer — Carbofuran 3% @ 8 kg/acre' + nl + '• Pod Borer — Chlorantraniliprole @ 0.4 ml/litre' + nl + '• Whitefly — Neem oil 2% + soap spray' + nl + nl + '⚠️ **Key diseases:**' + nl + '• Root Rot — Proper drainage, Trichoderma treatment' + nl + '• Leaf Blight — Mancozeb 75% @ 2.5 g/litre' + nl + nl + '🌱 **Preventive measures:**' + nl + '• Follow crop rotation' + nl + '• Use resistant varieties' + nl + '• Regular field monitoring' + nl + '• Adopt Integrated Pest Management (IPM)';
+  }
+
+  // 6. Which crop this season?
+  if (q.indexOf('this season') >= 0 || q.indexOf('इस मौसम') >= 0 || q.indexOf('मौसम में फसल') >= 0) {
+    var seasonCrop = season.indexOf('Kharif') >= 0 ? 'Soybean' : (season.indexOf('Rabi') >= 0 ? 'Wheat' : 'Moong (Summer)');
+    if (isHi) return '**' + season + ' — ' + dName + ' के लिए अनुशंसित फसल:**' + nl + nl + '🌾 **अनुशंसित फसल:** ' + seasonCrop + nl + '📈 **अनुमानित उपज:** 15-20 क्विंटल/एकड़' + nl + '💰 **अनुमानित लाभ:** ₹35,000-50,000/एकड़' + nl + '🧪 **उर्वरक:** N:P:K = 60:40:40 किग्रा/हेक्टेयर + जिंक 25 किग्रा/हे' + nl + '💧 **सिंचाई:** ' + (rain > 800 ? 'पर्याप्त वर्षा — नियमित सिंचाई' : 'सिंचाई आवश्यक — ड्रिप/स्प्रिंकलर') + nl + '🌧️ **मौसम:** तापमान ' + Math.round(heat) + '°C, वर्षा ' + Math.round(rain) + 'mm' + nl + '🏛️ **योजनाएँ:** PMFBY बीमा अवश्य कराएँ';
+    return '**' + season + ' — Recommended crop for ' + dName + ':**' + nl + nl + '🌾 **Recommended crop:** ' + seasonCrop + nl + '📈 **Expected yield:** 15-20 quintals/acre' + nl + '💰 **Estimated profit:** ₹35,000-50,000/acre' + nl + '🧪 **Fertilizer:** N:P:K = 60:40:40 kg/ha + Zinc 25 kg/ha' + nl + '💧 **Irrigation:** ' + (rain > 800 ? 'Adequate rainfall — normal schedule' : 'Irrigation needed — drip/sprinkler') + nl + '🌧️ **Weather:** Temp ' + Math.round(heat) + '°C, Rain ' + Math.round(rain) + 'mm' + nl + '🏛️ **Schemes:** Get PMFBY insurance for this crop';
+  }
+
+  return null; // not a chip question, use API
 }
 
 // Performs the actual Claude request for the latest message already in chatHistory.
