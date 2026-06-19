@@ -202,6 +202,8 @@ body{background:#f5f7fa;color:var(--text);font-family:-apple-system,BlinkMacSyst
 .advisory-body{font-size:0.65rem;color:var(--text-dim);line-height:1.5;}
 .advisory-actions{display:flex;gap:0.5rem;margin-top:0.5rem;}
 .adv-btn{font-size:0.6rem;padding:0.2rem 0.6rem;border-radius:3px;border:1px solid;cursor:pointer;background:transparent;transition:all 0.2s;}
+#advisory-container{display:grid;grid-template-columns:1fr 1fr;gap:0.2rem;}
+@media(max-width:1200px){#advisory-container{grid-template-columns:1fr;}}
 .adv-btn.wa{color:#2d8f5c;border-color:#2d8f5c;}
 .adv-btn.sms{color:var(--cyan);border-color:var(--cyan);}
 .adv-btn.hi{color:var(--orange);border-color:var(--orange);}
@@ -634,6 +636,21 @@ canvas.chart-canvas{max-height:100%;}
               <button class="adv-btn wa"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>
               <button class="adv-btn sms"><i class="fa fa-sms"></i> SMS</button>
             </div>
+          </div>
+          <!-- Village cadastral cards -->
+          <div class="advisory-card low" id="adv-card-4">
+            <div class="advisory-header">
+              <span class="advisory-icon">🌾</span>
+              <span class="advisory-title" id="adv-title-4">Village Cadastral Summary</span>
+            </div>
+            <div class="advisory-body" id="adv-body-4">Select a village to view cadastral aggregates.</div>
+          </div>
+          <div class="advisory-card low" id="adv-card-5">
+            <div class="advisory-header">
+              <span class="advisory-icon">🧪</span>
+              <span class="advisory-title" id="adv-title-5">Fertilizer & Crop Recommendation</span>
+            </div>
+            <div class="advisory-body" id="adv-body-5">Select a village to view fertilizer demand and recommended crops.</div>
           </div>
         </div>
       </div>
@@ -1360,9 +1377,51 @@ function updateAdvisories(distKey){
   } else {
     adv.push({icon:'🌿', title:'CROP HEALTH — '+nm, body:isHindi?'फसल की स्थिति अच्छी। NDVI '+ndvi.toFixed(2)+'। नियमित निगरानी जारी रखें।':'Crop condition good. NDVI '+ndvi.toFixed(2)+'. Continue regular monitoring.', severity:'low'});
   }
-  // Update DOM
+  // 5. Village cadastral — cultivated area
+  var vn = document.getElementById('villageSelect') ? document.getElementById('villageSelect').value : '';
+  var parcels = window._cadParcelsData;
+  if (vn && parcels && parcels.length > 0) {
+    var totalHa = 0, agriHa = 0, fallowHa = 0, cropHa = {};
+    parcels.forEach(function(p){
+      var a = p.area_ha || 0; totalHa += a;
+      if (p.land_use === 'Agriculture') { agriHa += a; }
+      if (p.land_use === 'Fallow') { fallowHa += a; }
+      var c = p.crop || 'Unknown';
+      cropHa[c] = (cropHa[c] || 0) + a;
+    });
+    var topCrops = Object.keys(cropHa).sort(function(a,b){ return cropHa[b]-cropHa[a]; });
+    var topCropStr = topCrops.slice(0,3).map(function(c){ return c+' ('+cropHa[c].toFixed(1)+'ha)'; }).join(', ');
+    var pctCult = totalHa > 0 ? Math.round(agriHa/totalHa*100) : 0;
+    var vilName = vn;
+    if (isHindi) {
+      adv.push({icon:'🌾', title:'गाँव कैडस्ट्रल सारांश — '+vilName, body:'कुल क्षेत्र: '+totalHa.toFixed(1)+'ha | कृषि: '+agriHa.toFixed(1)+'ha ('+pctCult+'%) | परती: '+fallowHa.toFixed(1)+'ha\nशीर्ष फसलें: '+topCropStr, severity:'low'});
+    } else {
+      adv.push({icon:'🌾', title:'VILLAGE CADASTRAL — '+vilName, body:'Total Area: '+totalHa.toFixed(1)+'ha | Cultivated: '+agriHa.toFixed(1)+'ha ('+pctCult+'%) | Fallow: '+fallowHa.toFixed(1)+'ha\nTop Crops: '+topCropStr, severity:'low'});
+    }
+    // 6. Fertilizer demand & crop recommendation
+    var NPK = {Rice:{n:120,p:60,k:40},Wheat:{n:120,p:60,k:40},Soybean:{n:20,p:60,k:40},Maize:{n:120,p:60,k:40},Gram:{n:20,p:50,k:30},Mustard:{n:80,p:40,k:40},Cotton:{n:100,p:50,k:50},Pigeonpea:{n:20,p:50,k:30},Groundnut:{n:20,p:60,k:40},Bajra:{n:80,p:40,k:40}};
+    var totN=0, totP=0, totK=0;
+    parcels.forEach(function(p){
+      if (p.land_use !== 'Agriculture') return;
+      var a = p.area_ha || 0;
+      var cropKey = (p.crop||'').replace(/\s*\(.*\)/,'');
+      var nk = NPK[cropKey];
+      if (nk) { totN += nk.n*a; totP += nk.p*a; totK += nk.k*a; }
+    });
+    var topRec = topCrops[0] || '—';
+    if (isHindi) {
+      adv.push({icon:'🧪', title:'उर्वरक मांग — '+vilName, body:'N:'+Math.round(totN)+'kg | P:'+Math.round(totP)+'kg | K:'+Math.round(totK)+'kg\nअनुशंसित फसल: '+topRec+' | मिट्टी के अनुकूल किस्मों का चयन करें।', severity:'low'});
+    } else {
+      adv.push({icon:'🧪', title:'FERTILIZER DEMAND — '+vilName, body:'N: '+Math.round(totN)+' kg | P: '+Math.round(totP)+' kg | K: '+Math.round(totK)+' kg\nRecommended Crop: '+topRec+' | Choose soil-suited variety.', severity:'low'});
+    }
+  } else {
+    // No village selected — show placeholder
+    adv.push({icon:'🌾', title:'VILLAGE CADASTRAL', body:isHindi?'कैडस्ट्रल डेटा देखने के लिए गाँव चुनें।':'Select a village to view cadastral aggregates.', severity:'low'});
+    adv.push({icon:'🧪', title:'FERTILIZER DEMAND', body:isHindi?'उर्वरक अनुशंसा के लिए गाँव चुनें।':'Select a village for fertilizer and crop recommendations.', severity:'low'});
+  }
+  // Update DOM — now supports cards 0-5
   adv.forEach(function(a,i){
-    if (i > 3) return;
+    if (i > 5) return;
     var card = document.getElementById('adv-card-'+i);
     if (!card) return;
     card.className = 'advisory-card ' + a.severity;

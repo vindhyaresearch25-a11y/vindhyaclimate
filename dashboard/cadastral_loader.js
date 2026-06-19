@@ -80,6 +80,7 @@
     _khasraMap = {};
     var cropCounts = {};
     CROPS.forEach(function(c){ cropCounts[c] = 0; });
+    window._cadParcelsData = [];
 
     _cadParcelLayer = L.geoJson(voronoi, {
       style: function(feature){
@@ -107,6 +108,7 @@
           risk: Math.random() > 0.7 ? "High" : "Low"
         };
         _khasraMap[khasraNum] = {feature: feature, layer: layer};
+        window._cadParcelsData.push(feature.properties);
 
         var opt = document.createElement('option');
         opt.value = khasraNum;
@@ -123,6 +125,11 @@
     map.fitBounds(_cadParcelLayer.getBounds());
 
     updateCropLegend(cropCounts);
+    // Trigger village-level advisory update with cadastral data
+    if (typeof updateAdvisories === 'function') {
+      var dk = document.getElementById('districtSelect').value;
+      if (dk) window.updateAdvisories(dk);
+    }
 
     if (!document.getElementById('parcel-label-style')) {
       var st = document.createElement('style');
