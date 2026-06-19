@@ -430,7 +430,11 @@
 
     // Season header
     var sLabelEl = el('agri-season-name');
-    if (sLabelEl) sLabelEl.textContent = sInfo.label;
+    if (sLabelEl) {
+      var sLabel = sInfo.label;
+      if (season === 'zayed' && soil.crops_zayed && soil.crops_zayed.indexOf('Fallow') >= 0) sLabel += ' — Mostly Fallow';
+      sLabelEl.textContent = sLabel;
+    }
     if (el('agri-soil-type')) el('agri-soil-type').textContent = soil.name;
 
     // Score per season
@@ -459,6 +463,11 @@
 
     var topCrop = scores[0] || {name:'—', score:0};
     var altCrop = scores[1] || {name:'—', score:0};
+    // Summer (Zayed) special handling: most farmers keep land fallow
+    if (season === 'zayed' && recCrops.indexOf('Fallow') >= 0) {
+      topCrop = {name:'Fallow (Most farms)', score:85};
+      altCrop = scores[0] || {name:'Vegetables (Some farms)', score:50};
+    }
     var suitability = topCrop.score >= 75 ? 'HIGH' : topCrop.score >= 50 ? 'MEDIUM' : 'LOW';
     var suitColor = topCrop.score >= 75 ? 'var(--green)' : topCrop.score >= 50 ? 'var(--yellow)' : 'var(--red)';
 
